@@ -12,6 +12,7 @@ struct CruiseView: View {
     @State private var targetAlt = 8500.0
     @State private var finder: FinderResult?
     @State private var table: [CruiseRow] = []
+    @State private var plan = CruiseEngine.planningNumbers(1900, true)
     @State private var jumpToReadout = false
 
     private var inputs: CruiseInputs {
