@@ -9,6 +9,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -64,6 +67,17 @@ jobs:
           name: N721NE-Weight-and-Balance-ipa
           path: N721NE-Weight-and-Balance.ipa
           retention-days: 90
+
+      - name: Publish the .ipa as the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" N721NE-Weight-and-Balance.ipa \
+            --repo "${{ github.repository }}" \
+            --title "N721NE Weight & Balance (build ${{ github.run_number }})" \
+            --notes "Download N721NE-Weight-and-Balance.ipa below and install it with Sideloadly. Built from commit ${GITHUB_SHA:0:7}." \
+            --latest
 
       - name: Save logs if something failed
         if: failure()

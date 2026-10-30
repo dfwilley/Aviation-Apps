@@ -14,8 +14,8 @@ This is a planning aid. The aircraft's own weight and balance record governs.
 
 Every push to `main` builds the app on a GitHub cloud Mac, runs the calculation tests, and produces an unsigned `.ipa` file.
 
-1. Open the **Actions** tab of this repository and click the newest green **Build iPhone app** run.
-2. Under **Artifacts**, download **N721NE-Weight-and-Balance-ipa**. It downloads as a .zip; unzip it to get `N721NE-Weight-and-Balance.ipa`.
+1. Download the latest app file: https://github.com/dfwilley/Weight-And-Balance/releases/latest/download/N721NE-Weight-and-Balance.ipa
+2. (All builds are listed under **Releases** on the repository page.)
 3. Connect the iPhone to your Windows PC, open **Sideloadly**, drag in the `.ipa`, enter your Apple ID and click **Start**.
 4. On the iPhone, go to **Settings › General › VPN & Device Management**, tap your Apple ID and choose **Trust**. (Developer Mode must also be on: **Settings › Privacy & Security › Developer Mode**.)
 
