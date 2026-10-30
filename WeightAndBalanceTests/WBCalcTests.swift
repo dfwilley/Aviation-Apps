@@ -57,7 +57,10 @@ final class WBCalcTests: XCTestCase {
         i.wL = "601"; i.aT = "231"
         let r = try XCTUnwrap(WB.compute(i))
         XCTAssertEqual(r.emptyWeight, 1249, accuracy: 1e-9)
-        XCTAssertEqual(r.emptyMoment, 601 * 71.325 + 583 * 71.625 + 65 * 231, accuracy: 1e-6)
+        let left: Double = 601 * 71.325
+        let right: Double = 583 * 71.625
+        let tail: Double = 65 * 231
+        XCTAssertEqual(r.emptyMoment, left + right + tail, accuracy: 1e-6)
     }
 
     func testFuelBurnAndLimits() throws {
