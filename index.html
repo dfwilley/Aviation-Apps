@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hangar Board installer</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+body{margin:0;font:17px/1.55 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f5f5f3;color:#1b1b1b}
+main{max-width:860px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:30px;margin:0 0 4px} h1 span{color:#c62d26}
+h2{font-size:21px;margin:30px 0 8px;border-bottom:2px solid #c62d26;padding-bottom:4px}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px 18px;margin:12px 0}
+.muted{color:#5a5a5a}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border-bottom:1px solid #e3e3e3;text-align:left;padding:7px 8px} th{background:#f0f0ee}
+img{max-width:100%;border:1px solid #ccc;border-radius:8px}
+esp-web-install-button button{font:inherit;font-weight:700;font-size:19px;background:#c62d26;color:#fff;border:0;border-radius:12px;padding:14px 28px;cursor:pointer}
+.warn{background:#fff6e0;border-left:4px solid #e0a000;padding:10px 14px;border-radius:0}
+code{background:#eee;padding:1px 5px;border-radius:4px}
+@media print{esp-web-install-button{display:none}}
+</style>
+</head>
+<body><main>
+<h1>Hangar <span>Board</span></h1>
+<p class="muted">A 7.5-inch e-paper status board for the hangar. It shows the airport's current weather and forecast, density altitude, sunrise and sunset, and when maintenance and pilot currency items come due. Anything out of limits turns red.</p>
+<img src="docs/preview-good-weather.png" alt="Sample board: VFR weather, density altitude, and maintenance items loaded from the database, with a transponder check coming due shown in red">
+
+<h2>1. Install the software</h2>
+<div class="card">
+<ol>
+<li>Plug the ESP32 board into your computer with a USB data cable.</li>
+<li>Use <b>Chrome</b> or <b>Edge</b> on a Windows, Mac or Linux computer. Phones and Safari can't do this step.</li>
+<li>Click the button below, choose the board's port (often "CP210x", "CH340" or "USB JTAG/serial") and click <b>Install Hangar Board</b>.</li>
+</ol>
+<esp-web-install-button manifest="manifest.json">
+  <button slot="activate">Connect and install</button>
+  <span slot="unsupported">This browser can't install software on the board. Open this page in Chrome or Edge on a computer.</span>
+  <span slot="not-allowed">Installing needs a secure page (https). Open the GitHub Pages address.</span>
+</esp-web-install-button>
+<p class="muted">Takes about a minute. If the board isn't found, hold its <b>BOOT</b> button while clicking Connect. If the port isn't listed at all, the computer may need the USB driver for the board's chip (Silicon Labs CP210x or WCH CH340).</p>
+</div>
+
+<h2>2. Connect the display</h2>
+<div class="card">
+<p>Choose your wiring on the board's settings page later. These are the two built-in options; anything else can be entered as custom pins.</p>
+<table>
+<tr><th>Display pin</th><th>ESP32 dev board (standard)</th><th>ESP32-S3 dev board (standard)</th><th>Waveshare ESP32 e-Paper Driver Board</th></tr>
+<tr><td>BUSY</td><td>GPIO 4</td><td>GPIO 7</td><td rowspan="6">Already wired on the board; plug the display ribbon into it</td></tr>
+<tr><td>RST</td><td>GPIO 16</td><td>GPIO 8</td></tr>
+<tr><td>DC</td><td>GPIO 17</td><td>GPIO 9</td></tr>
+<tr><td>CS</td><td>GPIO 5</td><td>GPIO 10</td></tr>
+<tr><td>CLK (SCK)</td><td>GPIO 18</td><td>GPIO 12</td></tr>
+<tr><td>DIN (MOSI)</td><td>GPIO 23</td><td>GPIO 11</td></tr>
+<tr><td>VCC / GND</td><td colspan="2">3.3 V / GND</td><td>USB power</td></tr>
+</table>
+<p class="warn">The Good Display panels are bare ribbon-cable screens. They need a small adapter board between the ribbon and the ESP32, such as Good Display's DESPI-C02. The Waveshare 7.5" display usually comes with its own adapter (HAT). Power the display from <b>3.3 V</b>, not 5 V.</p>
+</div>
+
+<h2>3. Set up Wi-Fi</h2>
+<div class="card">
+<ol>
+<li>Power the board. If it can't find a saved network, the screen shows setup steps.</li>
+<li>On your phone, join the Wi-Fi network <b>HangarBoard-Setup</b>. A setup page opens. If it doesn't, browse to <code>192.168.4.1</code>.</li>
+<li>Tap <b>Configure WiFi</b>, pick the hangar network, and type its password. The password stays on the board and is never sent anywhere else.</li>
+</ol>
+<p class="muted">The screen stays blank or garbled? The board doesn't know which display or wiring you have yet. The default is the Good Display GDEY075Z08 (red) on standard ESP32 wiring. Once Wi-Fi is set up, open the settings page and choose the right display and wiring.</p>
+</div>
+
+<h2>4. Settings page</h2>
+<div class="card">
+<p>On any phone or computer on the hangar Wi-Fi, open <b>http://hangarboard.local</b>. The board's own address is also printed at the bottom of the screen. There you can:</p>
+<ul>
+<li><b>load due items from your maintenance database</b>: tap the file button, pick <code>Maintenance Record_be.accdb</code> from the Files app's Dropbox folder, check the preview, and tap <b>Use these items</b>. It reads the Recurring Maintenance and Service Bulletin tables plus the latest Hobbs, and never changes the file. Items you added yourself, like pilot currency, are kept,</li>
+<li>enter the current <b>Hobbs time</b> after each flight,</li>
+<li>add or edit <b>due items</b> by date, Hobbs hours, or whichever comes first, with a warning window (inside it, items turn red),</li>
+<li>leave a <b>note</b>,</li>
+<li>change the airport, time zone, update interval, density altitude warning, display type and wiring,</li>
+<li><b>import or back up</b> all settings as text.</li>
+</ul>
+</div>
+
+<h2>What turns red</h2>
+<div class="card">
+<table>
+<tr><th>Item</th><th>Red when</th></tr>
+<tr><td>Flight category</td><td>Anything other than VFR</td></tr>
+<tr><td>Wind</td><td>20 knots or more, sustained or gusting</td></tr>
+<tr><td>Visibility / sky</td><td>Under 5 miles / ceiling under 3,000 ft</td></tr>
+<tr><td>Density altitude</td><td>Above your warning setting (default 5,000 ft)</td></tr>
+<tr><td>Weather report</td><td>Older than 90 minutes, or the update failed</td></tr>
+<tr><td>Forecast (TAF)</td><td>Any period with wind 20+ kt, ceiling under 3,000 ft, visibility under 5 miles, thunderstorms, fog or dust</td></tr>
+<tr><td>Due items</td><td>Inside the warning window, or overdue</td></tr>
+</table>
+<p class="muted">On black-and-white displays the same items get a ⚠ marker instead.</p>
+<img src="docs/preview-bad-weather.png" alt="Sample board in poor weather with red warnings for flight category, gusty wind, low visibility, ceiling, density altitude and forecast thunderstorms">
+</div>
+
+<p class="muted">Weather comes from the National Weather Service Aviation Weather Center (aviationweather.gov) and is refreshed every 15 minutes by default. It's for situational awareness only: always get an official briefing before flight. Source code is in the <code>HangarBoard</code> folder of this repository.</p>
+</main></body></html>
