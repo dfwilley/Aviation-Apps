@@ -212,45 +212,47 @@ struct CruiseView: View {
         }
     }
 
-    @ViewBuilder private var resultsBody: some View {
-        heading("FUEL FLOW", unit: "gal/hr", tile: .results)
-        if let cruise {
-            switch cruise {
-            case let .impossible(V, _, need, avail, top):
-                Text("\(CruiseEngine.fmt(V)) KTAS needs about \(CruiseEngine.fmt(need)) hp. Full throttle here makes \(CruiseEngine.fmt(avail)) hp, about \(CruiseEngine.fmt(top)) KTAS.")
-                    .font(.subheadline)
-                    .foregroundStyle(ink)
-                Button("Use \(CruiseEngine.fmt(top)) KTAS") { ktas = top.rounded() }
-                    .buttonStyle(.plain)
-                    .font(.headline)
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(gold)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            case let .ok(_, _, need, powerPct, lopOK, gChart, gLop, g, kias, options, betterAlt):
-                Text(CruiseEngine.fmt(g, 1))
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(ink)
-                    .frame(maxWidth: .infinity)
-                let bestOption = options.first
-                fact("Power", "\(CruiseEngine.fmt(need)) hp · \(CruiseEngine.fmt(powerPct))%")
-                fact("RPM / MP", bestOption.map { "\(CruiseEngine.fmt($0.rpm)) / \(CruiseEngine.fmt($0.mp, 1)) in" } ?? "Not available")
-                fact("Mileage", "\(CruiseEngine.fmt(ktas / g, 1)) nm/gal")
-                fact("Indicated", "\(CruiseEngine.fmt(kias)) KIAS")
-                let usable = max(0, 50 - 0.75 * g)
-                fact("Range", "\(CruiseEngine.fmt(usable / g * ktas)) nm")
-                Text(mixtureSentence(lopOK: lopOK, pct: powerPct, gChart: gChart, gLop: gLop))
-                    .font(.subheadline)
-                    .foregroundStyle(muted)
-                if let betterAlt {
-                    Text("\(CruiseEngine.fmt(betterAlt.alt)) ft holds this speed on about \(CruiseEngine.fmt(betterAlt.gph, 1)) gal/hr.")
+    private var resultsBody: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            heading("FUEL FLOW", unit: "gal/hr", tile: .results)
+            if let cruise {
+                switch cruise {
+                case let .impossible(V, _, need, avail, top):
+                    Text("\(CruiseEngine.fmt(V)) KTAS needs about \(CruiseEngine.fmt(need)) hp. Full throttle here makes \(CruiseEngine.fmt(avail)) hp, about \(CruiseEngine.fmt(top)) KTAS.")
                         .font(.subheadline)
                         .foregroundStyle(ink)
-                }
-                HStack(spacing: 8) {
-                    chip("Lean of peak", on: mode == .lop) { mode = .lop }
-                    chip("Rich of peak", on: mode == .chart) { mode = .chart }
+                    Button("Use \(CruiseEngine.fmt(top)) KTAS") { ktas = top.rounded() }
+                        .buttonStyle(.plain)
+                        .font(.headline)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(gold)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                case let .ok(_, _, need, powerPct, lopOK, gChart, gLop, g, kias, options, betterAlt):
+                    Text(CruiseEngine.fmt(g, 1))
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(ink)
+                        .frame(maxWidth: .infinity)
+                    let bestOption = options.first
+                    fact("Power", "\(CruiseEngine.fmt(need)) hp · \(CruiseEngine.fmt(powerPct))%")
+                    fact("RPM / MP", bestOption.map { "\(CruiseEngine.fmt($0.rpm)) / \(CruiseEngine.fmt($0.mp, 1)) in" } ?? "Not available")
+                    fact("Mileage", "\(CruiseEngine.fmt(ktas / g, 1)) nm/gal")
+                    fact("Indicated", "\(CruiseEngine.fmt(kias)) KIAS")
+                    let usable = max(0, 50 - 0.75 * g)
+                    fact("Range", "\(CruiseEngine.fmt(usable / g * ktas)) nm")
+                    Text(mixtureSentence(lopOK: lopOK, pct: powerPct, gChart: gChart, gLop: gLop))
+                        .font(.subheadline)
+                        .foregroundStyle(muted)
+                    if let betterAlt {
+                        Text("\(CruiseEngine.fmt(betterAlt.alt)) ft holds this speed on about \(CruiseEngine.fmt(betterAlt.gph, 1)) gal/hr.")
+                            .font(.subheadline)
+                            .foregroundStyle(ink)
+                    }
+                    HStack(spacing: 8) {
+                        chip("Lean of peak", on: mode == .lop) { mode = .lop }
+                        chip("Rich of peak", on: mode == .chart) { mode = .chart }
+                    }
                 }
             }
         }
