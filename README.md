@@ -1,4 +1,6 @@
-# N721NE Cruise Fuel Burn (iPhone)
+# Cruise Perf (iPhone)
+
+Shows on the home screen as **Cruise Perf**.
 
 Native iPhone version of the N721NE Cruise Fuel Burn web app. Everything in the web app is here:
 

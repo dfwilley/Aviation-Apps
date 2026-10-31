@@ -81,7 +81,7 @@ struct CruiseView: View {
             .toolbarBackground(Theme.bg, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("N721NE Cruise Fuel Burn").font(.headline).foregroundStyle(Theme.ink)
+                    Text("Cruise Perf").font(.headline).foregroundStyle(Theme.ink)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showArrange = true } label: {
