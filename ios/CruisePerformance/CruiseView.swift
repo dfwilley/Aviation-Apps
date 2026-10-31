@@ -1,16 +1,56 @@
 import SwiftUI
 
+/// Colors that switch with light or dark mode. Dark is the original look; light follows the web app.
 enum Theme {
-    static let bg = Color(red: 0.047, green: 0.047, blue: 0.055)
-    static let card = Color(red: 0.11, green: 0.11, blue: 0.12)
-    static let chip = Color(red: 0.17, green: 0.17, blue: 0.18)
-    static let ink = Color(red: 0.96, green: 0.94, blue: 0.90)
-    static let muted = Color(red: 0.62, green: 0.60, blue: 0.56)
-    static let line = Color.white.opacity(0.10)
-    static let gold = Color(red: 0.89, green: 0.67, blue: 0.28)
-    static let goldSoft = Color(red: 0.89, green: 0.67, blue: 0.28).opacity(0.16)
-    static let warn = Color(red: 0.94, green: 0.70, blue: 0.35)
-    static let warnSoft = Color(red: 0.23, green: 0.16, blue: 0.07)
+    static let bg = dyn((0.953, 0.961, 0.969), (0.047, 0.047, 0.055))
+    static let card = dyn((1.0, 1.0, 1.0), (0.11, 0.11, 0.12))
+    static let chip = dyn((0.910, 0.922, 0.937), (0.17, 0.17, 0.18))
+    static let ink = dyn((0.094, 0.129, 0.169), (0.96, 0.94, 0.90))
+    static let muted = dyn((0.353, 0.404, 0.451), (0.62, 0.60, 0.56))
+    static let line = dyn((0.0, 0.0, 0.0), (1.0, 1.0, 1.0), 0.10)
+    /// Accent: bright gold on dark, deeper amber on light so text stays readable.
+    static let gold = dyn((0.60, 0.40, 0.04), (0.89, 0.67, 0.28))
+    static let goldSoft = dyn((0.60, 0.40, 0.04), (0.89, 0.67, 0.28), 0.16)
+    /// Text on a gold button.
+    static let onGold = dyn((1.0, 1.0, 1.0), (0.0, 0.0, 0.0))
+    static let warn = dyn((0.63, 0.36, 0.0), (0.94, 0.70, 0.35))
+    static let warnSoft = dyn((0.984, 0.937, 0.863), (0.23, 0.16, 0.07))
+
+    private static func dyn(_ light: (CGFloat, CGFloat, CGFloat), _ dark: (CGFloat, CGFloat, CGFloat), _ alpha: CGFloat = 1) -> Color {
+        Color(UIColor { traits in
+            let c = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: c.0, green: c.1, blue: c.2, alpha: alpha)
+        })
+    }
+}
+
+/// Light, Dark, or Match iPhone. Can be changed any time from the top bar.
+enum Appearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    static let storageKey = "n721ne.appearance"
+    var title: String {
+        switch self {
+        case .system: return "Match iPhone"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max"
+        case .dark: return "moon"
+        }
+    }
+    /// Sets the whole app window (including the Arrange sheet and menus) to this appearance.
+    func apply() {
+        let style: UIUserInterfaceStyle = self == .light ? .light : (self == .dark ? .dark : .unspecified)
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows { window.overrideUserInterfaceStyle = style }
+        }
+    }
 }
 
 private func f(_ x: Double, _ d: Int = 0) -> String { CruiseEngine.fmt(x, d) }
@@ -28,6 +68,8 @@ private struct TableKey: Hashable {
 
 struct CruiseView: View {
     @StateObject private var layout = LayoutStore()
+    @AppStorage(Appearance.storageKey) private var appearanceRaw = Appearance.dark.rawValue
+    private var appearance: Appearance { Appearance(rawValue: appearanceRaw) ?? .dark }
 
     // Flight conditions (shared by the finder and the calculator), remembered between launches.
     @AppStorage("n721ne.alt") private var alt = 8500.0
@@ -83,6 +125,18 @@ struct CruiseView: View {
                 ToolbarItem(placement: .principal) {
                     Text("Cruise Perf").font(.headline).foregroundStyle(Theme.ink)
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("Appearance", selection: $appearanceRaw) {
+                            ForEach(Appearance.allCases) { a in
+                                Label(a.title, systemImage: a.icon).tag(a.rawValue)
+                            }
+                        }
+                    } label: {
+                        Label("Appearance: \(appearance.title)", systemImage: appearance.icon)
+                    }
+                    .tint(Theme.gold)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showArrange = true } label: {
                         Label("Arrange", systemImage: "rectangle.3.group")
@@ -99,7 +153,8 @@ struct CruiseView: View {
             }
             .sheet(isPresented: $showArrange) { ArrangeView(layout: layout) }
         }
-        .preferredColorScheme(.dark)
+        .onAppear { appearance.apply() }
+        .onChange(of: appearanceRaw) { _, _ in appearance.apply() }
         .task(id: FinderKey(fK: fK, fA: fA, W: weight, dT: dT, mode: modeRaw, cal: cal, own: afr0Text)) {
             try? await Task.sleep(for: .milliseconds(40))
             if Task.isCancelled { return }
@@ -198,7 +253,7 @@ struct CruiseView: View {
         Button { fK = best } label: {
             Text("Most efficient · \(f(best)) KTAS")
                 .font(.headline)
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.onGold)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
                 .background(Theme.gold)
@@ -517,7 +572,7 @@ struct Grip: View {
                     .font(.subheadline.weight(.semibold))
                     .padding(10)
                     .background(Theme.gold)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Theme.onGold)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .accessibilityLabel("Move \(name)")
@@ -582,7 +637,7 @@ struct Chip: View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline)
-                .foregroundStyle(on ? Color.black : Theme.ink)
+                .foregroundStyle(on ? Theme.onGold : Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity)

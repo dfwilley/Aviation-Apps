@@ -45,6 +45,5 @@ struct ArrangeView: View {
                 Button("Reset layout", role: .destructive) { layout.reset() }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
