@@ -60,6 +60,15 @@ enum FinderResult {
     )
 }
 
+struct MixTarget {
+    var n: Double
+    var fa: String
+    var afr: String
+    var band: String
+    var egt: String
+    var label: String
+}
+
 struct PlanningNumbers {
     var hp200: Double
     var avail: Double
@@ -232,7 +241,7 @@ enum CruiseEngine {
         bisect({ v in bhpForSpeed(v * KT, h, W, dT, K).bhp - bhp }, 80, 260)
     }
 
-    private static func interp(_ x: Double, _ pts: [(Double, Double)]) -> Double {
+    static func interp(_ x: Double, _ pts: [(Double, Double)]) -> Double {
         if x <= pts[0].0 {
             let a = pts[0]
             let b = pts[1]
@@ -424,10 +433,39 @@ enum CruiseEngine {
         return speedForBhp(hp, o.alt, o.W, o.dT, K).rounded()
     }
 
+    static let calibration = K_CAL
+
+    /// Density ratio (sigma) for indicated-airspeed conversion.
+    static func sigma(_ h: Double, _ dT: Double) -> Double { atm(h, dT).sigma }
+
+    /// EFII System32 Initial Fuel Tuning Procedure (CS prop, rev 6/20), step 4: target A/F at 0% trim.
+    static let TUNE: [(Double, Double)] = [(2000, 15.5), (2100, 15.5), (2200, 15), (2300, 14.5), (2400, 14), (2500, 13.5), (2600, 13), (2700, 12.5), (2800, 12)]
+
+    /// Mixture target used by the cruise finder (same rules as the web app).
+    static func mixTarget(pct: Double, lopOK: Bool) -> MixTarget {
+        if lopOK { return MixTarget(n: 16.0, fa: "0.062", afr: "16.0", band: "15.5 to 16.5", egt: "about 50 °F lean of peak EGT (last cylinder to peak)", label: "Lean of peak") }
+        if pct <= 75 { return MixTarget(n: 14.7, fa: "0.068", afr: "14.7", band: "14.5 to 15.0", egt: "at peak EGT (Lycoming best economy, 75% power and below)", label: pct > 70 ? "Rich of peak" : "Peak EGT") }
+        return MixTarget(n: 12.0, fa: "0.083", afr: "12.0", band: "12.0 or richer", egt: "at least 150 °F rich of peak EGT (Lycoming maximum power cruise)", label: "Rich of peak")
+    }
+
+    /// EFII fuel trim, percent: (A/F at 0% trim / target A/F) - 1. Returns the base A/F used too.
+    static func efiiTrim(rpm: Double?, ownAfr0: Double?, target: Double) -> (trim: Int, base: Double, own: Bool)? {
+        if let own = ownAfr0, own > 9, own < 22 {
+            return (jsRoundPct(own / target), own, true)
+        }
+        guard let rpm else { return nil }
+        let base = interp(rpm, TUNE)
+        return (jsRoundPct(base / target), base, false)
+    }
+
+    /// Same as JavaScript Math.round((ratio - 1) * 100), which rounds halves up.
+    static func jsRoundPct(_ ratio: Double) -> Int { Int(floor((ratio - 1) * 100 + 0.5)) }
+
     static func fmt(_ x: Double, _ d: Int = 0) -> String {
         let f = NumberFormatter()
         f.locale = Locale(identifier: "en_US")
         f.numberStyle = .decimal
+        f.roundingMode = .halfUp
         f.minimumFractionDigits = d
         f.maximumFractionDigits = d
         return f.string(from: NSNumber(value: x)) ?? String(format: "%.\(d)f", x)

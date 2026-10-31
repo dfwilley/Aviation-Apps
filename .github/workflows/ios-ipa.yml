@@ -9,6 +9,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check the math against the web app
+        run: |
+          set -euo pipefail
+          mkdir -p build/check
+          xcrun --sdk macosx swiftc -O ios/CruisePerformance/CruiseModel.swift ios/ModelCheck/main.swift -o build/check/modelcheck
+          build/check/modelcheck ios/ModelCheck/expected.json > build/check/native.json
+          python3 ios/ModelCheck/compare.py ios/ModelCheck/expected.json build/check/native.json
+
       - name: Build without signing
         run: |
           set -euo pipefail
