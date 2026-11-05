@@ -52,8 +52,13 @@ def main():
     q = urllib.parse.quote(bundle_id)
 
     ids = call("GET", f"/bundleIds?filter[identifier]={q}&limit=200")["data"]
-    if any(b["attributes"]["identifier"] == bundle_id for b in ids):
+    match = [b for b in ids if b["attributes"]["identifier"] == bundle_id]
+    if match:
         print(f"Bundle ID {bundle_id} is registered.")
+        seed = match[0]["attributes"].get("seedId")
+        team = os.environ.get("APPLE_TEAM_ID", "").strip()
+        print("APPLE_TEAM_ID matches Apple's team ID:", seed == team,
+              f"(secret is {len(team)} characters, Apple's is {len(seed or '')})")
     else:
         call("POST", "/bundleIds", {"data": {"type": "bundleIds", "attributes": {
             "identifier": bundle_id, "name": name, "platform": "IOS"}}})
