@@ -67,11 +67,12 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/HangarVoiceLog.xcarchive \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
 
-      - name: Sign with Apple cloud signing and upload to App Store Connect
+      - name: Sign with Apple cloud signing, then upload to App Store Connect
         run: |
           cat > build/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -79,7 +80,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>export</string>
             <key>signingStyle</key><string>automatic</string>
             <key>teamID</key><string>${APPLE_TEAM_ID}</string>
             <key>manageAppVersionAndBuildNumber</key><false/>
@@ -95,6 +96,10 @@ jobs:
             -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          ls -la build/export
+          IPA=$(ls build/export/*.ipa | head -1)
+          API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/keys" xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
           echo "Uploaded build ${{ github.run_number }}. Apple takes about 5-30 minutes to process it before it appears in TestFlight."
 
       - name: Remove the API key file
