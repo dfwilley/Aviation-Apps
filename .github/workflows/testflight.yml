@@ -73,9 +73,11 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KC_PW" "$KC" > /dev/null
           security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
           security find-identity -v -p codesigning "$KC"
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$RUNNER_TEMP/signing/profile.mobileprovision" \
-            "$HOME/Library/MobileDevice/Provisioning Profiles/$SIGN_PROFILE_UUID.mobileprovision"
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                   "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"
+            cp "$RUNNER_TEMP/signing/profile.mobileprovision" "$d/$SIGN_PROFILE_UUID.mobileprovision"
+          done
           echo "KC=$KC" >> "$GITHUB_ENV"
 
       - name: Build the signed app archive
