@@ -41,7 +41,8 @@ def call(method, path, body=None):
                  "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req) as r:
-            return json.load(r)
+            raw = r.read()
+            return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")
         sys.exit(f"::error::Apple API {method} {path} failed ({e.code}): {detail}")

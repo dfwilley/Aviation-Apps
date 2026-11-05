@@ -58,7 +58,25 @@ jobs:
           python3 -m pip install --quiet --break-system-packages "pyjwt[crypto]"
           python3 tools/asc_precheck.py "$BUNDLE_ID" "$APP_NAME"
 
-      - name: Build the app archive
+      - name: Create temporary signing certificate and profile
+        run: |
+          python3 tools/asc_signing.py create "$BUNDLE_ID" "$RUNNER_TEMP/signing"
+          KC="$RUNNER_TEMP/build.keychain-db"
+          KC_PW=$(openssl rand -hex 16)
+          security create-keychain -p "$KC_PW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KC_PW" "$KC"
+          security import "$RUNNER_TEMP/signing/signing.p12" -k "$KC" \
+            -P "$SIGN_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KC_PW" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KC"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/signing/profile.mobileprovision" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles/$SIGN_PROFILE_UUID.mobileprovision"
+          echo "KC=$KC" >> "$GITHUB_ENV"
+
+      - name: Build the signed app archive
         run: |
           xcodebuild archive \
             -project HangarVoiceLog.xcodeproj \
@@ -69,11 +87,12 @@ jobs:
             -archivePath build/HangarVoiceLog.xcarchive \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$SIGN_PROFILE_NAME" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KC"
 
-      - name: Sign with Apple cloud signing, then upload to App Store Connect
+      - name: Export the .ipa file
         run: |
           cat > build/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -82,8 +101,13 @@ jobs:
           <dict>
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>export</string>
-            <key>signingStyle</key><string>automatic</string>
+            <key>signingStyle</key><string>manual</string>
             <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key><string>${SIGN_PROFILE_NAME}</string>
+            </dict>
             <key>manageAppVersionAndBuildNumber</key><false/>
             <key>uploadSymbols</key><true/>
           </dict>
@@ -92,17 +116,22 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath build/HangarVoiceLog.xcarchive \
             -exportOptionsPlist build/ExportOptions.plist \
-            -exportPath build/export \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -exportPath build/export
           ls -la build/export
+
+      - name: Upload to App Store Connect
+        run: |
           IPA=$(ls build/export/*.ipa | head -1)
           API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/keys" xcrun altool --upload-app -f "$IPA" -t ios \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
           echo "Uploaded build ${{ github.run_number }}. Apple takes about 5-30 minutes to process it before it appears in TestFlight."
 
-      - name: Remove the API key file
+      - name: Revoke the temporary certificate and profile
         if: always()
-        run: rm -rf "$RUNNER_TEMP/keys"
+        run: python3 tools/asc_signing.py cleanup
+
+      - name: Remove key files and keychain
+        if: always()
+        run: |
+          [ -n "$KC" ] && security delete-keychain "$KC" || true
+          rm -rf "$RUNNER_TEMP/keys" "$RUNNER_TEMP/signing"
