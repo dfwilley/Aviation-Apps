@@ -1,0 +1,261 @@
+<title>N721NE Weight &amp; Balance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="N721NE W&amp;B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: status tiles, then load stepper inputs, then the CG envelope chart, then the loading table and sources. Matches the N721NE Cruise Fuel Burn app. */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --ink:#18212b; --muted:#5a6773; --rule:#d6dde3;
+  --accent:#1f5f8b; --accent-soft:#e2edf5; --ok:#2e7d4f; --ok-soft:#e1f2e8; --bad:#b3261e; --bad-soft:#fbe4e2; --warn:#a15c00; --warn-soft:#fbefdc;
+  --env:#1f5f8b; --env2:#8a6bb8; --pt:#18212b;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",Arial,sans-serif;
+  --f-data:"JetBrains Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#18202a; --ink:#e4eaf0; --muted:#9aa8b5; --rule:#2c3946;
+  --accent:#7fb6dc; --accent-soft:#1d3142; --ok:#6fcf97; --ok-soft:#173326; --bad:#ff8a80; --bad-soft:#3a1c1a; --warn:#f0b35a; --warn-soft:#3a2a12;
+  --env:#7fb6dc; --env2:#b9a0e0; --pt:#e4eaf0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#18202a; --ink:#e4eaf0; --muted:#9aa8b5; --rule:#2c3946;
+  --accent:#7fb6dc; --accent-soft:#1d3142; --ok:#6fcf97; --ok-soft:#173326; --bad:#ff8a80; --bad-soft:#3a1c1a; --warn:#f0b35a; --warn-soft:#3a2a12;
+  --env:#7fb6dc; --env2:#b9a0e0; --pt:#e4eaf0; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1000px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;font-size:.75rem;color:var(--accent);font-weight:600}
+h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;line-height:1.1;margin:2px 0 0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.25rem;margin:0 0 10px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:18px}
+.status{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-weight:600;border-left:4px solid var(--ok);background:var(--ok-soft)}
+.status.bad{border-color:var(--bad);background:var(--bad-soft)}
+.status.warn{border-color:var(--warn);background:var(--warn-soft)}
+.status .dot{width:12px;height:12px;border-radius:50%;background:var(--ok);flex:none}
+.status.bad .dot{background:var(--bad)} .status.warn .dot{background:var(--warn)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.tl{background:var(--panel);padding:10px 12px;min-width:0}
+.tl .k{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:.72rem;color:var(--muted);font-weight:600}
+.tl .v{font-family:var(--f-data);font-size:1.3rem;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1.25}
+.tl .v small{font-family:var(--f-body);font-size:.8rem;color:var(--muted);font-weight:400;margin-left:3px}
+.tl.bad .v{color:var(--bad)}
+.inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+@media (min-width:760px){.inputs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.inputs label{display:block;font-weight:600;font-size:.9rem;margin-bottom:4px}
+.inputs label .hint{font-weight:400;color:var(--muted);font-size:.8rem}
+.step{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:4px}
+.step input{width:100%;box-sizing:border-box;text-align:center;font-family:var(--f-data);font-size:1rem;padding:8px 2px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--ink)}
+.sb{font:inherit;font-size:.95rem;line-height:1;border:1px solid var(--accent);border-radius:6px;background:var(--accent-soft);color:var(--accent);cursor:pointer;min-height:42px}
+.sb:active{background:var(--accent);color:var(--panel)}
+.sb:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:.9rem;padding:9px 6px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--panel);font-weight:600}
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-body);font-size:11px;fill:var(--muted)}
+.chart{max-width:640px}
+.chart .lab{fill:var(--ink);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:440px;font-size:.92rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:right;font-variant-numeric:tabular-nums}
+th{font-family:var(--f-display);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:.76rem;color:var(--muted)}
+td{font-family:var(--f-data);font-size:.86rem}
+th:first-child,td:first-child{text-align:left;font-family:var(--f-body)}
+tr.tot td{font-weight:600;border-top:2px solid var(--rule)}
+.notes{display:grid;gap:8px;font-size:.92rem}
+.notes p{margin:0;max-width:72ch}
+.tag{display:inline-block;font-family:var(--f-display);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;border-radius:3px;margin-right:6px;vertical-align:1px}
+.tag.v{background:var(--accent-soft);color:var(--accent)} .tag.a{background:var(--warn-soft);color:var(--warn)}
+.tlbtn{font:inherit;text-align:left;border:0;color:inherit;cursor:pointer;display:block;width:100%}
+.tlbtn:hover{background:var(--accent-soft)}
+.tlbtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tlbtn[aria-expanded=true]{background:var(--accent-soft)}
+.ewtop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ewdone{padding:0 16px;font-weight:600}
+.ewgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:6px 10px;align-items:center;max-width:520px}
+.ewh{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.06em;font-size:.74rem;color:var(--muted);font-weight:600}
+.ewl{font-weight:600;font-size:.92rem}
+.ewgrid input{width:100%;box-sizing:border-box;font-family:var(--f-data);font-size:1rem;padding:8px 6px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--ink);text-align:right}
+.ewsum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;margin-top:10px;font-size:.95rem}
+.ewsum b{font-family:var(--f-data);color:var(--accent)}
+.ewadd{margin-top:12px;font-size:.92rem}
+.ewadd summary{cursor:pointer;color:var(--accent);font-weight:600}
+.linkbtn{font:inherit;font-size:.85rem;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
+.hint{color:var(--muted);font-size:.85rem}
+@media (max-width:600px){
+  .wrap{padding-block:10px 40px;gap:14px}
+  h1{font-size:1.45rem}
+  .panel{padding:14px}
+  .tl{padding:7px 10px}
+  .tl .k{font-size:.66rem}
+  .tl .v{font-size:1.12rem}
+}
+</style>
+
+<div class="wrap">
+<header>
+  <a class="linkbtn" href="./">Fuel Planner</a>
+  <div class="eyebrow">N721NE · Van's RV-14 · Serial 140336</div>
+  <h1>N721NE Weight &amp; Balance</h1>
+</header>
+
+<div class="status" id="status" role="status"><span class="dot"></span><span id="statusText"></span></div>
+
+<div class="tiles" aria-label="Weight and balance results">
+  <div class="tl" id="tTow"><div class="k">Takeoff weight</div><div class="v" id="vTow"></div></div>
+  <div class="tl" id="tTcg"><div class="k">Takeoff CG</div><div class="v" id="vTcg"></div></div>
+  <div class="tl" id="tLw"><div class="k">Landing weight</div><div class="v" id="vLw"></div></div>
+  <div class="tl" id="tLcg"><div class="k">Landing CG</div><div class="v" id="vLcg"></div></div>
+  <div class="tl" id="tMar"><div class="k">Below max weight</div><div class="v" id="vMar"></div></div>
+  <button class="tl tlbtn" id="tEw" aria-expanded="false" aria-controls="ewSec"><div class="k">Empty weight ✎</div><div class="v" id="vEw"></div></button>
+  <div class="tl" id="tZf"><div class="k">Zero-fuel CG</div><div class="v" id="vZf"></div></div>
+  <div class="tl" id="tMaxF"><div class="k">Max fuel this load</div><div class="v" id="vMaxF"></div></div>
+</div>
+
+<section class="panel" aria-label="Load">
+  <div class="inputs">
+    <div><label for="pil">Pilot <span class="hint">lb</span></label><div class="step"><button class="sb" data-t="pil" data-d="-5" aria-label="Pilot minus 5 pounds">&#9660;</button><input id="pil" type="number" inputmode="numeric" min="0" max="300" value="240"><button class="sb" data-t="pil" data-d="5" aria-label="Pilot plus 5 pounds">&#9650;</button></div></div>
+    <div><label for="pax">Passenger <span class="hint">lb</span></label><div class="step"><button class="sb" data-t="pax" data-d="-5" aria-label="Passenger minus 5 pounds">&#9660;</button><input id="pax" type="number" inputmode="numeric" min="0" max="300" value="0"><button class="sb" data-t="pax" data-d="5" aria-label="Passenger plus 5 pounds">&#9650;</button></div></div>
+    <div><label for="bag">Baggage <span class="hint">lb</span></label><div class="step"><button class="sb" data-t="bag" data-d="-5" aria-label="Baggage minus 5 pounds">&#9660;</button><input id="bag" type="number" inputmode="numeric" min="0" max="150" value="20"><button class="sb" data-t="bag" data-d="5" aria-label="Baggage plus 5 pounds">&#9650;</button></div></div>
+    <div><label for="fuel">Takeoff fuel <span class="hint">gal</span></label><div class="step"><button class="sb" data-t="fuel" data-d="-1" aria-label="Fuel minus 1 gallon">&#9660;</button><input id="fuel" type="number" inputmode="decimal" min="0" max="50.7" step="0.1" value="50"><button class="sb" data-t="fuel" data-d="1" aria-label="Fuel plus 1 gallon">&#9650;</button></div></div>
+    <div><label for="burn">Fuel burned <span class="hint">gal</span></label><div class="step"><button class="sb" data-t="burn" data-d="-1" aria-label="Fuel burned minus 1 gallon">&#9660;</button><input id="burn" type="number" inputmode="decimal" min="0" max="50.7" step="0.1" value="30"><button class="sb" data-t="burn" data-d="1" aria-label="Fuel burned plus 1 gallon">&#9650;</button></div></div>
+    <div><label id="catL">Category</label><div class="seg" role="group" aria-labelledby="catL"><button id="cU" aria-pressed="true">Utility</button><button id="cA" aria-pressed="false">Aerobatic</button></div></div>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="ewH" id="ewSec" hidden>
+  <div class="ewtop"><h2 id="ewH" style="margin:0">Empty weight (scale readings)</h2><button class="sb ewdone" id="ewDone">Done</button></div>
+  <p class="hint" style="margin:6px 0 10px">Change these when equipment changes or the airplane is reweighed. Weights are what each scale reads with the airplane level, full oil and empty tanks.</p>
+  <div class="ewgrid">
+    <div class="ewh"></div><div class="ewh">Weight, lb</div><div class="ewh">Arm, in</div>
+    <div class="ewl">Left main</div><input id="wL" type="number" inputmode="decimal" step="0.5" value="599"><input id="aL" type="number" inputmode="decimal" step="0.01" value="71.325">
+    <div class="ewl">Right main</div><input id="wR" type="number" inputmode="decimal" step="0.5" value="583"><input id="aR" type="number" inputmode="decimal" step="0.01" value="71.625">
+    <div class="ewl">Tailwheel</div><input id="wT" type="number" inputmode="decimal" step="0.5" value="65"><input id="aT" type="number" inputmode="decimal" step="0.01" value="230.25">
+  </div>
+  <div class="ewsum"><span id="ewOut"></span><button class="linkbtn" id="ewReset">Restore February 4, 2024 weighing</button></div>
+  <details class="ewadd"><summary>Add or remove an item instead of reweighing</summary>
+    <div class="ewgrid" style="margin-top:8px">
+      <div class="ewl">Weight change, lb <span class="hint">(− to remove)</span></div><input id="dW" type="number" inputmode="decimal" step="0.1" value="0"><div></div>
+      <div class="ewl">Item arm, in</div><input id="dA" type="number" inputmode="decimal" step="0.1" value="0"><div></div>
+    </div>
+    <p class="hint" style="margin:6px 0 0">Measure the arm from the datum, 72 in forward of the wing leading edge. The change is added to the empty weight and moment above.</p>
+  </details>
+</section>
+
+<section class="panel">
+  <h2>CG envelope</h2>
+  <svg class="chart" id="chart" viewBox="0 0 440 340" role="img" aria-label="Weight versus center of gravity with the utility and aerobatic envelopes"></svg>
+  <div class="legend"><span><i style="background:var(--env)"></i>Utility envelope</span><span><i style="background:var(--env2)"></i>Aerobatic envelope</span><span>● takeoff &nbsp;○ landing &nbsp;■ zero fuel</span></div>
+</section>
+
+<section class="panel">
+  <h2>Loading table</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>Weight, lb</th><th>Arm, in</th><th>Moment, in-lb</th></tr></thead>
+    <tbody id="tb"></tbody></table></div>
+</section>
+
+<section class="panel notes">
+  <h2>Limits and sources</h2>
+  <p><span class="tag v">Verified</span>Empty weight 1,247 lb, empty CG 79.75 in, moment 99,447.30 in-lb, weighed February 4, 2024: left main 599 lb, right main 583 lb, tail 65 lb. The sheet prints the main-wheel arms rounded to 71.33 and 71.63 in; the app uses 71.325 and 71.625 in, which reproduce the sheet’s moments exactly. Tail arm 230.25 in. Arms: seats 99.83 in, baggage 129.48 in, fuel 81.97 in. Datum 72 in forward of the wing leading edge. Source: N721NE Weight and Balance (<em>RV-14 / Registration and Airworthiness</em>), page 1.</p>
+  <p><span class="tag v">Verified</span>CG range 82.08 to 88.24 in (18% to 29% of wing chord), gross weight 2,050 lb. Aerobatic: 1,900 lb maximum and aft CG 86.0 in (25% of chord). Source: Van's RV-14 Weight and Balance Data Quick Reference (<em>RV-14 / RV-14 W&amp;B Reference.pdf</em>), Limits section.</p>
+  <p><span class="tag a">Note</span>Your N721NE Weight and Balance sheet lists the aerobatic gross weight as 1,950 lb, but Van's quick reference says aerobatic flight must not be done above 1,900 lb because that is a structural limit. This app uses Van's 1,900 lb. Check which number is in your operating limitations.</p>
+  <p><span class="tag v">Verified</span>Baggage limit 100 lb (N721NE POH Rev 1.10, sections 1.10, 2.5 and 2.11). Usable fuel 50.7 gal of 50.8 gal total (POH sections 1.8 and 2.10). Fuel at 6.0 lb/gal. In aerobatic flight the baggage area must be empty (POH section 2.7), and the app flags any baggage when Aerobatic is selected.</p>
+  <p><span class="tag a">Note</span>Burning fuel moves the CG aft, because the fuel arm (81.97 in) is ahead of the loaded CG. Check the landing point as well as the takeoff point. Oil is included in the empty weight (weighed with full oil). This is a planning aid; your aircraft's own weight and balance record governs.</p>
+</section>
+</div>
+
+<script>
+let EW=1247, EM=99447.30; const ARM={seat:99.83,bag:129.48,fuel:81.97}, FWD=82.08, AFT_U=88.24, AFT_A=86.0, GW_U=2050, GW_A=1900, BAGMAX=100, FUELMAX=50.7, LBG=6.0;
+const $=id=>document.getElementById(id);
+const fmt=(x,d=0)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const mac=cg=>(cg-72)/56*100;
+let cat='U';
+const EWDEF={wL:599,aL:71.325,wR:583,aR:71.625,wT:65,aT:230.25,dW:0,dA:0};
+const KEYS=['pil','pax','bag','fuel','burn','wL','aL','wR','aR','wT','aT','dW','dA'];
+try{const s=JSON.parse(localStorage.getItem('n721ne-wb3')||'null');if(s){KEYS.forEach(k=>{if(s[k]!=null)$(k).value=s[k];});if(s.cat)cat=s.cat;}}catch(e){}
+function save(){try{const s={cat};KEYS.forEach(k=>s[k]=$(k).value);localStorage.setItem('n721ne-wb3',JSON.stringify(s));}catch(e){}}
+function num(id){const v=parseFloat($(id).value);return isFinite(v)&&v>0?v:0;}
+function setCat(c){cat=c;$('cU').setAttribute('aria-pressed',c==='U');$('cA').setAttribute('aria-pressed',c==='A');calc();}
+$('cU').onclick=()=>setCat('U');$('cA').onclick=()=>setCat('A');
+document.querySelectorAll('.sb[data-t]').forEach(b=>b.addEventListener('click',()=>{const el=$(b.dataset.t);el.value=Math.max(+el.min,Math.min(+el.max,(parseFloat(el.value)||0)+(+b.dataset.d)));calc();}));
+KEYS.forEach(k=>$(k).addEventListener('input',calc));
+function ewOpen(o){$('ewSec').hidden=!o;$('tEw').setAttribute('aria-expanded',o);if(o){$('ewSec').scrollIntoView({behavior:'smooth',block:'start'});}else{$('tEw').scrollIntoView({behavior:'smooth',block:'center'});}}
+$('tEw').onclick=()=>ewOpen($('ewSec').hidden);
+$('ewDone').onclick=()=>ewOpen(false);
+$('ewReset').onclick=()=>{Object.entries(EWDEF).forEach(([k,v])=>$(k).value=v);calc();};
+function fv(id){const v=parseFloat($(id).value);return isFinite(v)?v:0;}
+
+function calc(){
+  const ew0=fv('wL')+fv('wR')+fv('wT'), em0=fv('wL')*fv('aL')+fv('wR')*fv('aR')+fv('wT')*fv('aT');
+  EW=ew0+fv('dW'); EM=em0+fv('dW')*fv('dA');
+  const changed=Math.abs(EW-1247)>0.05||Math.abs(EM-99447.30)>1;
+  $('ewOut').innerHTML=EW>0?`Empty weight <b>${fmt(EW,1)} lb</b> at <b>${fmt(EM/EW,2)} in</b>, moment ${fmt(EM,1)} in-lb${changed?' <span class="hint">(2024 weighing: 1,247 lb at 79.75 in)</span>':''}`:'Enter scale weights.';
+  if(EW<=0) return;
+  $('vEw').innerHTML=`${fmt(EW)}<small>lb · ${fmt(EM/EW,2)} in</small>`;
+  const pil=num('pil'),pax=num('pax'),bag=num('bag'),fuelG=Math.min(num('fuel'),FUELMAX),burnG=Math.min(num('burn'),fuelG);
+  const GW=cat==='U'?GW_U:GW_A, AFT=cat==='U'?AFT_U:AFT_A;
+  const zfW=EW+pil+pax+bag, zfM=EM+(pil+pax)*ARM.seat+bag*ARM.bag;
+  const fW=fuelG*LBG, lfW=(fuelG-burnG)*LBG;
+  const toW=zfW+fW, toM=zfM+fW*ARM.fuel, toCG=toM/toW;
+  const lW=zfW+lfW, lM=zfM+lfW*ARM.fuel, lCG=lM/lW;
+  const zfCG=zfM/zfW;
+  const maxFuel=Math.max(0,Math.min(FUELMAX,(GW-zfW)/LBG));
+  const issues=[];
+  if(toW>GW) issues.push(`takeoff weight is ${fmt(toW-GW)} lb over the ${fmt(GW)} lb ${cat==='U'?'gross':'aerobatic'} limit`);
+  const inCG=c=>c>=FWD-1e-9&&c<=AFT+1e-9;
+  if(!inCG(toCG)) issues.push(`takeoff CG ${fmt(toCG,2)} in is ${toCG<FWD?'forward of '+FWD:'aft of '+AFT} in`);
+  if(!inCG(lCG)) issues.push(`landing CG ${fmt(lCG,2)} in is ${lCG<FWD?'forward of '+FWD:'aft of '+AFT} in`);
+  if(!inCG(zfCG)) issues.push(`zero-fuel CG ${fmt(zfCG,2)} in is ${zfCG<FWD?'forward of '+FWD:'aft of '+AFT} in`);
+  if(bag>BAGMAX) issues.push(`baggage is ${fmt(bag-BAGMAX)} lb over the ${BAGMAX} lb limit`);
+  if(cat==='A'&&bag>0) issues.push(`baggage must be empty for aerobatic flight (POH 2.7); remove ${fmt(bag)} lb`);
+  if(num('fuel')>FUELMAX) issues.push(`fuel is more than the ${FUELMAX} gal usable capacity`);
+  const st=$('status');
+  const near=!issues.length&&(GW-toW<25||AFT-Math.max(toCG,lCG,zfCG)<0.3||Math.min(toCG,lCG)-FWD<0.3);
+  st.className='status'+(issues.length?' bad':near?' warn':'');
+  $('statusText').textContent=issues.length?`Out of limits: ${issues.join('; ')}.`:near?`Within ${cat==='U'?'utility':'aerobatic'} limits, but close to an edge.`:`Within ${cat==='U'?'utility':'aerobatic'} limits for takeoff and landing.`;
+  $('vTow').innerHTML=`${fmt(toW)}<small>lb</small>`;
+  $('vTcg').innerHTML=`${fmt(toCG,2)}<small>in · ${fmt(mac(toCG),1)}%</small>`;
+  $('vLw').innerHTML=`${fmt(lW)}<small>lb</small>`;
+  $('vLcg').innerHTML=`${fmt(lCG,2)}<small>in · ${fmt(mac(lCG),1)}%</small>`;
+  $('vMar').innerHTML=`${fmt(GW-toW)}<small>lb</small>`;
+  $('vZf').innerHTML=`${fmt(zfCG,2)}<small>in · ${fmt(mac(zfCG),1)}%</small>`;$('tZf').classList.toggle('bad',!inCG(zfCG));
+  $('vMaxF').innerHTML=`${fmt(Math.floor(maxFuel*10)/10,1)}<small>gal</small>`;
+  $('tTow').classList.toggle('bad',toW>GW);$('tMar').classList.toggle('bad',toW>GW);
+  $('tTcg').classList.toggle('bad',!inCG(toCG));$('tLcg').classList.toggle('bad',!inCG(lCG));
+  const rows=[['Empty aircraft',EW,EM/EW,EM],['Pilot',pil,ARM.seat,pil*ARM.seat],['Passenger',pax,ARM.seat,pax*ARM.seat],['Baggage',bag,ARM.bag,bag*ARM.bag],[`Fuel at takeoff (${fmt(fuelG,1)} gal)`,fW,ARM.fuel,fW*ARM.fuel]];
+  $('tb').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${fmt(r[1],1)}</td><td>${fmt(r[2],2)}</td><td>${fmt(r[3],1)}</td></tr>`).join('')+
+   `<tr class="tot"><td>Takeoff</td><td>${fmt(toW,1)}</td><td>${fmt(toCG,2)}</td><td>${fmt(toM,1)}</td></tr>`+
+   `<tr><td>Fuel burned (${fmt(burnG,1)} gal)</td><td>−${fmt(burnG*LBG,1)}</td><td>${fmt(ARM.fuel,2)}</td><td>−${fmt(burnG*LBG*ARM.fuel,1)}</td></tr>`+
+   `<tr class="tot"><td>Landing</td><td>${fmt(lW,1)}</td><td>${fmt(lCG,2)}</td><td>${fmt(lM,1)}</td></tr>`+
+   `<tr><td>Zero fuel</td><td>${fmt(zfW,1)}</td><td>${fmt(zfCG,2)}</td><td>${fmt(zfM,1)}</td></tr>`;
+  draw(toW,toCG,lW,lCG,zfW,zfCG);
+  save();
+}
+function draw(toW,toCG,lW,lCG,zfW,zfCG){
+  const L=50,R=430,T=14,B=296, x0=80,x1=90, y0=1200,y1=2150;
+  const X=c=>L+(c-x0)/(x1-x0)*(R-L), Y=w=>B-(w-y0)/(y1-y0)*(B-T);
+  let s='';
+  for(let c=80;c<=90;c++){s+=`<line x1="${X(c)}" y1="${T}" x2="${X(c)}" y2="${B}" stroke="var(--rule)" stroke-width="1"/>`;s+=`<text x="${X(c)}" y="${B+16}" text-anchor="middle">${c}</text>`;}
+  for(let w=1200;w<=2100;w+=100){s+=`<line x1="${L}" y1="${Y(w)}" x2="${R}" y2="${Y(w)}" stroke="var(--rule)" stroke-width="1"/>`;s+=`<text x="${L-6}" y="${Y(w)+4}" text-anchor="end">${fmt(w)}</text>`;}
+  s+=`<text x="${(L+R)/2}" y="${B+34}" text-anchor="middle">CG, inches aft of datum</text>`;
+  s+=`<text x="14" y="${(T+B)/2}" text-anchor="middle" transform="rotate(-90 14 ${(T+B)/2})">Weight, lb</text>`;
+  const uOn=cat==='U';
+  s+=`<rect x="${X(FWD)}" y="${Y(GW_U)}" width="${X(AFT_U)-X(FWD)}" height="${Y(y0)-Y(GW_U)}" fill="var(--env)" fill-opacity="${uOn?0.12:0.05}" stroke="var(--env)" stroke-width="${uOn?2:1}"/>`;
+  s+=`<rect x="${X(FWD)}" y="${Y(GW_A)}" width="${X(AFT_A)-X(FWD)}" height="${Y(y0)-Y(GW_A)}" fill="var(--env2)" fill-opacity="${uOn?0.05:0.14}" stroke="var(--env2)" stroke-width="${uOn?1:2}" stroke-dasharray="${uOn?'5 4':''}"/>`;
+  s+=`<text class="lab" x="${X(FWD)+4}" y="${Y(GW_U)-4}" text-anchor="start">Utility ${fmt(GW_U)} lb</text>`;
+  s+=`<text class="lab" x="${X(FWD)+4}" y="${Y(GW_A)+14}" text-anchor="start">Aerobatic ${fmt(GW_A)} lb</text>`;
+  const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const P=(c,w)=>[cl(X(c),L,R),cl(Y(w),T,B)];
+  const [tx,ty]=P(toCG,toW),[lx,ly]=P(lCG,lW),[zx,zy]=P(zfCG,zfW);
+  s+=`<line x1="${tx}" y1="${ty}" x2="${zx}" y2="${zy}" stroke="var(--pt)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  s+=`<line x1="${tx}" y1="${ty}" x2="${lx}" y2="${ly}" stroke="var(--pt)" stroke-width="2"/>`;
+  s+=`<rect x="${zx-5}" y="${zy-5}" width="10" height="10" fill="var(--pt)"/>`;
+  s+=`<circle cx="${lx}" cy="${ly}" r="6" fill="var(--panel)" stroke="var(--pt)" stroke-width="2"/>`;
+  s+=`<circle cx="${tx}" cy="${ty}" r="6.5" fill="var(--pt)"/>`;
+  $('chart').innerHTML=s;
+}
+setCat(cat);
+</script>
