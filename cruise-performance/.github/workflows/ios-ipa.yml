@@ -1,0 +1,49 @@
+name: iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the math against the web app
+        run: |
+          set -euo pipefail
+          mkdir -p build/check
+          xcrun --sdk macosx swiftc -O ios/CruisePerformance/CruiseModel.swift ios/ModelCheck/main.swift -o build/check/modelcheck
+          build/check/modelcheck ios/ModelCheck/expected.json > build/check/native.json
+          python3 ios/ModelCheck/compare.py ios/ModelCheck/expected.json build/check/native.json
+
+      - name: Build without signing
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project ios/CruisePerformance.xcodeproj \
+            -scheme CruisePerformance \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Pack an IPA for Sideloadly
+        run: |
+          set -euo pipefail
+          APP=$(find build/Build/Products -name 'CruisePerformance.app' -type d | head -1)
+          test -n "$APP"
+          codesign --force --sign - --timestamp=none "$APP"
+          rm -rf Payload
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -r CruisePerformance.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CruisePerformance-ipa
+          path: CruisePerformance.ipa
