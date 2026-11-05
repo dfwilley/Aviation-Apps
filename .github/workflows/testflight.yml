@@ -49,7 +49,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
           KEY_PATH="$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY_PATH"
+          printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$KEY_PATH"
+          head -1 "$KEY_PATH" | grep -q 'BEGIN PRIVATE KEY' && echo 'Key file looks right.' || echo '::warning::Key file does not start with BEGIN PRIVATE KEY'
           echo "KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Register bundle ID and confirm the App Store Connect app record
