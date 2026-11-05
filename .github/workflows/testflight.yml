@@ -48,10 +48,14 @@ jobs:
       - name: Save the API key where Xcode looks for it
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
-          KEY_PATH="$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          KEY_PATH="$RUNNER_TEMP/keys/AuthKey_$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]').p8"
           printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$KEY_PATH"
           head -1 "$KEY_PATH" | grep -q 'BEGIN PRIVATE KEY' && echo 'Key file looks right.' || echo '::warning::Key file does not start with BEGIN PRIVATE KEY'
           echo "KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          # Trim stray spaces/line breaks that come along when secrets are pasted
+          echo "TEAM_ID=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "KEY_ID=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
+          echo "ISSUER_ID=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')" >> "$GITHUB_ENV"
 
       - name: Register bundle ID and confirm the App Store Connect app record
         run: |
@@ -90,7 +94,7 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/HangarVoiceLog.xcarchive \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="$SIGN_PROFILE_NAME" \
@@ -106,7 +110,7 @@ jobs:
             <key>method</key><string>app-store-connect</string>
             <key>destination</key><string>export</string>
             <key>signingStyle</key><string>manual</string>
-            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
             <key>signingCertificate</key><string>Apple Distribution</string>
             <key>provisioningProfiles</key>
             <dict>
@@ -127,7 +131,7 @@ jobs:
         run: |
           IPA=$(ls build/export/*.ipa | head -1)
           API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/keys" xcrun altool --upload-app -f "$IPA" -t ios \
-            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
           echo "Uploaded build ${{ github.run_number }}. Apple takes about 5-30 minutes to process it before it appears in TestFlight."
 
       - name: Revoke the temporary certificate and profile
