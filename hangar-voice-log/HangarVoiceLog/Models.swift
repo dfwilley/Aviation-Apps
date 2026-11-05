@@ -37,8 +37,8 @@ struct HangarData: Codable, Equatable {
 }
 
 extension HangarData {
+    /// Performed-by ID for the owner when no Access data file supplies maintainers.
     static let ownerId = 1
-    static let ownerName = "Dale Willey, Owner"
 
     /// Shorter button names for the jobs you use most, like the web Hangar Log.
     static let friendlyNames: [Int: String] = [
@@ -59,40 +59,15 @@ extension HangarData {
         friendlyNames[job.recurringId] ?? job.name
     }
 
-    /// Built-in copy used until the first data file is found. Wording from the
-    /// Recurring Maintenance table as read on October 28, 2026.
+    /// Empty starting point: no standard jobs, no Hobbs, until the owner adds
+    /// their own jobs in Settings or links an Access data file.
     static let builtIn = HangarData(
         schema: 1,
-        generatedAt: ISO8601DateFormatter().date(from: "2026-10-28T12:00:00Z") ?? Date(),
-        source: "Built-in copy (October 28, 2026)",
-        lastHobbs: LastHobbs(value: 13.3, date: "2026-08-25", logId: 769),
-        maintainers: [Maintainer(id: ownerId, name: ownerName, ap: false)],
-        jobs: [
-            Job(recurringId: 3, name: "Oil Change",
-                entry: "Oil and filter change. Removed and inspected oil sump filter element, appears normal with no debris. Inspected oil filter element, appears normal. Filled with 6 qts Phillips 20W-50. Ground run / leak check - no anomalies noted.",
-                laborHours: 1.0, equipmentIds: nil),
-            Job(recurringId: 5, name: "Lubricate Propeller",
-                entry: "Lubed propeller with 1 oz Aeroshell #6 in accordance with the Hartzell Propeller Manual. Test flown with no issues.",
-                laborHours: 0.5, equipmentIds: nil),
-            Job(recurringId: 6, name: "Annual Condition Inspection",
-                entry: "Annual condition inspection. Compression checks #1 [ ]/80, #2 [ ]/80, #3 [ ]/80, #4 [ ]/80. Inspected spark plugs, no deposits noted, engine timing right magneto 25° BTDC, left magneto 25° BTDC. Inspected horizontal stabilator forward spar crack as required by Vans Aircraft Service Bulletin 14-03-01. Found no cracks. Inspected the elevator spar web near the elevator attach points for cracks as required by Vans Aircraft Service Bulletin 14-02-03. Found no cracks.",
-                laborHours: 8.0, equipmentIds: nil),
-            Job(recurringId: 14, name: "Transponder Certification",
-                entry: "Tested transponnder IAW 14 CFR 91.414 and found to comply with Part 43, App F.",
-                laborHours: 0.7, equipmentIds: nil),
-            Job(recurringId: 15, name: "ELT",
-                entry: "Performed ELT Inspection and test",
-                laborHours: 1.0, equipmentIds: nil),
-            Job(recurringId: 16, name: "Propeller Overhaul",
-                entry: "Performed propeller overhaul IAW applicable Hartzell  directives",
-                laborHours: 12.0, equipmentIds: nil),
-            Job(recurringId: 18, name: "Rotate Sparkplugs",
-                entry: "Removed and inspected spark plugs, all look clean. Rotated sparks plug (bottom to top, top to bottom of next cylinder in firing order). Torqued to 35 ft-lbs.",
-                laborHours: 0.5, equipmentIds: nil),
-            Job(recurringId: 20, name: "Pitot Static Certification",
-                entry: "Tested pitot static system IAW 14 CFR 91.411 to 20,000 ft and found to comply with Part 43, App E.",
-                laborHours: 4.0, equipmentIds: nil)
-        ]
+        generatedAt: Date(timeIntervalSince1970: 0),
+        source: nil,
+        lastHobbs: nil,
+        maintainers: [],
+        jobs: []
     )
 
     static func decode(_ data: Data) throws -> HangarData {
@@ -117,7 +92,7 @@ struct LogEntry: Identifiable, Codable, Hashable {
     var hobbs = ""
     var laborHours = ""
     var performedById: Int = HangarData.ownerId
-    var performedByName: String = HangarData.ownerName
+    var performedByName: String = ""
     /// The job button picked: a Recurring Maintenance name, or Squawk repair / Modification / Other.
     var job = ""
     var recurringId: Int = 0

@@ -98,12 +98,26 @@ final class LogbookFormatterTests: XCTestCase {
         XCTAssertEqual(HangarData.chipName(for: data.jobs[0]), "Oil change")
     }
 
-    func testBuiltInCopyHasStandardJobs() {
-        let names = HangarData.builtIn.jobs.map(HangarData.chipName(for:))
-        XCTAssertTrue(names.contains("Oil change"))
-        XCTAssertTrue(names.contains("Prop lube"))
-        XCTAssertTrue(names.contains("Pitot-static check"))
-        XCTAssertEqual(HangarData.builtIn.lastHobbs?.value, 13.3)
+    func testBuiltInCopyHasNoPersonalData() {
+        XCTAssertTrue(HangarData.builtIn.jobs.isEmpty)
+        XCTAssertTrue(HangarData.builtIn.maintainers.isEmpty)
+        XCTAssertNil(HangarData.builtIn.lastHobbs)
+        XCTAssertEqual(LogEntry().performedByName, "")
+    }
+
+    func testCustomJobIdsAreNegativeAndUnique() {
+        XCTAssertEqual(AppSettings.nextCustomId(after: []), -1)
+        let jobs = [HangarData.Job(recurringId: -1, name: "A", entry: "", laborHours: nil, equipmentIds: nil),
+                    HangarData.Job(recurringId: -3, name: "B", entry: "", laborHours: nil, equipmentIds: nil)]
+        XCTAssertEqual(AppSettings.nextCustomId(after: jobs), -4)
+    }
+
+    func testCustomJobsImportWithNoRecurringId() {
+        var entry = LogEntry()
+        entry.recurringId = -2
+        entry.text = "Replaced brake linings."
+        let fields = LogbookFormatter.importLine(for: entry).components(separatedBy: "\t")
+        XCTAssertEqual(fields[5], "0")
     }
 
     func testLastHobbsUsesHighestReading() {

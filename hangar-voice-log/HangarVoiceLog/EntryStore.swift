@@ -13,6 +13,7 @@ final class EntryStore: ObservableObject {
     @Published private(set) var folderName: String? = AccessFolder.folderName
 
     private let fileManager = FileManager.default
+    private let isDemo = DemoMode.isOn
 
     var documentsURL: URL { fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0] }
     var mediaURL: URL { documentsURL.appendingPathComponent("Media", isDirectory: true) }
@@ -21,6 +22,11 @@ final class EntryStore: ObservableObject {
 
     init() {
         try? fileManager.createDirectory(at: mediaURL, withIntermediateDirectories: true)
+        if isDemo {
+            entries = DemoMode.entries
+            folderName = nil
+            return
+        }
         loadEntries()
         loadCachedData()
     }
@@ -73,7 +79,7 @@ final class EntryStore: ObservableObject {
 
     /// Reads the newest Hangar Log Data file from Dropbox. Called each time the app opens.
     func refreshData() {
-        guard AccessFolder.isChosen, !isLoadingData else { return }
+        guard !isDemo, AccessFolder.isChosen, !isLoadingData else { return }
         isLoadingData = true
         dataStatus = nil
         Task.detached {
@@ -114,6 +120,14 @@ final class EntryStore: ObservableObject {
         names.forEach(deleteMedia)
         entries.removeAll { $0.id == entry.id }
         saveEntries()
+    }
+
+    /// For owners without an Access link: marks the entry as written in the logbook.
+    func markLogged(_ entry: LogEntry) {
+        var done = entry
+        done.status = .sent
+        done.sentAt = Date()
+        upsert(done)
     }
 
     /// Adds the entry to Claude Logbook Import.txt and marks it sent.
@@ -168,6 +182,7 @@ final class EntryStore: ObservableObject {
     }
 
     private func saveEntries() {
+        guard !isDemo else { return }
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

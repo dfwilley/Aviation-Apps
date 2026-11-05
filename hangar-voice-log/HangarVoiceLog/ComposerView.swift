@@ -4,6 +4,7 @@ import SwiftUI
 /// The "New entry" card: job buttons, date, Hobbs, hours, who, entry text, voice, photos.
 struct ComposerView: View {
     @EnvironmentObject private var store: EntryStore
+    @EnvironmentObject private var settings: AppSettings
 
     let isNew: Bool
     let onDone: (String) -> Void
@@ -27,16 +28,28 @@ struct ComposerView: View {
     @State private var showingCamera = false
     @State private var shareItems: ShareItems?
     @State private var showingCalendar = false
+    @State private var newJob: HangarData.Job?
 
-    init(existing: LogEntry?, onDone: @escaping (String) -> Void) {
+    init(existing: LogEntry?, defaultPerformer: String, onDone: @escaping (String) -> Void) {
         self.isNew = existing == nil
         self.onDone = onDone
-        _entry = State(initialValue: existing ?? LogEntry())
+        var fresh = LogEntry()
+        fresh.performedByName = defaultPerformer
+        _entry = State(initialValue: existing ?? fresh)
         _hobbsAuto = State(initialValue: existing == nil)
         _laborManual = State(initialValue: !(existing?.laborHours.isEmpty ?? true))
     }
 
-    private var jobs: [HangarData.Job] { store.hangarData.jobs }
+    /// Standard jobs from a linked Access data file plus the ones typed into Settings.
+    private var jobs: [HangarData.Job] { store.hangarData.jobs + settings.customJobs }
+
+    /// Whether finished entries go to an Access import file.
+    private var linked: Bool { store.folderName != nil }
+
+    private var maintainers: [HangarData.Maintainer] {
+        let fromFile = store.hangarData.maintainers
+        return fromFile.isEmpty ? [.init(id: HangarData.ownerId, name: settings.displayOwner, ap: nil)] : fromFile
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,7 +63,9 @@ struct ComposerView: View {
             }
 
             if entry.status == .sent, let sentAt = entry.sentAt {
-                notice("Added to the Access import file on \(LogbookFormatter.longDate(sentAt)). Changes here stay on the phone.")
+                notice(linked
+                       ? "Added to the Access import file on \(LogbookFormatter.longDate(sentAt)). Changes here stay on the phone."
+                       : "Marked as logged on \(LogbookFormatter.longDate(sentAt)).")
             }
 
             jobPicker
@@ -75,6 +90,9 @@ struct ComposerView: View {
             CameraPicker { addPhoto($0) }.ignoresSafeArea()
         }
         .sheet(item: $shareItems) { ShareSheet(items: $0.items) }
+        .sheet(item: $newJob) { job in
+            JobEditor(job: job).environmentObject(settings)
+        }
     }
 
     // MARK: Job buttons
@@ -93,6 +111,11 @@ struct ComposerView: View {
                         pickExtra(name)
                     }
                 }
+                Chip(title: "+ Standard job", selected: false) {
+                    newJob = HangarData.Job(recurringId: AppSettings.nextCustomId(after: settings.customJobs),
+                                            name: "", entry: "", laborHours: nil, equipmentIds: nil)
+                }
+                .accessibilityLabel("Add a standard job")
             }
         }
     }
@@ -202,7 +225,7 @@ struct ComposerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 FieldLabel(text: "Performed by")
                 Menu {
-                    ForEach(store.hangarData.maintainers) { person in
+                    ForEach(maintainers) { person in
                         Button(person.name) {
                             entry.performedById = person.id
                             entry.performedByName = person.name
@@ -323,7 +346,7 @@ struct ComposerView: View {
         let url = store.fileURL(for: audio)
         Task {
             do {
-                let text = try await Transcriber.transcribe(url: url)
+                let text = try await Transcriber.transcribe(url: url, extraTerms: [settings.model, settings.tailNumber])
                 let existing = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 entry.text = existing.isEmpty ? text : existing + " " + text
                 status = "Added what you said to the entry. Check it for misheard words."
@@ -402,8 +425,13 @@ struct ComposerView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 if entry.status != .sent {
-                    Button("Send to Access") { send() }
-                        .buttonStyle(HangarButtonStyle(kind: .primary))
+                    if linked {
+                        Button("Send to Access") { send() }
+                            .buttonStyle(HangarButtonStyle(kind: .primary))
+                    } else {
+                        Button("Mark as logged") { markLogged() }
+                            .buttonStyle(HangarButtonStyle(kind: .primary))
+                    }
                 }
                 Button(entry.status == .sent ? "Save changes" : "Save draft") { saveDraft() }
                     .buttonStyle(HangarButtonStyle())
@@ -429,14 +457,15 @@ struct ComposerView: View {
     }
 
     private var shareText: String {
-        var header = "N721NE — \(LogbookFormatter.longDate(entry.workDate))"
+        let tail = settings.tailNumber.trimmingCharacters(in: .whitespaces).uppercased()
+        var header = (tail.isEmpty ? "" : "\(tail) — ") + LogbookFormatter.longDate(entry.workDate)
         if !entry.hobbs.isEmpty { header += " — Hobbs \(entry.hobbs)" }
         return "\(header)\n\n\(entry.text)\n\n\(entry.performedByName)"
     }
 
     private func send() {
         guard AccessFolder.isChosen else {
-            status = "Choose your Dropbox Maintenance Software folder at the bottom of the page first."
+            status = "Link your Access folder in Settings first."
             return
         }
         guard let hobbs = LogbookFormatter.number(entry.hobbs), hobbs > 0 else {
@@ -470,6 +499,23 @@ struct ComposerView: View {
                 status = "Didn't send: \(error.localizedDescription) Your entry is still here."
             }
         }
+    }
+
+    /// Without an Access link: the owner copies or shares the entry into their
+    /// own logbook, then marks it done here.
+    private func markLogged() {
+        guard !entry.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            status = "Write or say the logbook entry first."
+            return
+        }
+        guard !LogbookFormatter.hasBlanks(entry.text) else {
+            status = "The entry still has [ ] blanks. Fill them in first."
+            return
+        }
+        recorder.stopPlayback()
+        filesRemoved.forEach(store.deleteMedia)
+        store.markLogged(entry)
+        onDone("Marked as logged. It's under Logged in the queue below.")
     }
 
     private func saveDraft() {

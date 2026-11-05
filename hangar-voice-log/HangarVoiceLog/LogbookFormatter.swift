@@ -71,7 +71,7 @@ enum LogbookFormatter {
             labor,
             entry.equipmentIds.map(String.init).joined(separator: ","),
             String(entry.performedById),
-            String(entry.recurringId),
+            String(max(entry.recurringId, 0)),   // jobs typed into the app have no Access ID
             "0",
             text
         ]

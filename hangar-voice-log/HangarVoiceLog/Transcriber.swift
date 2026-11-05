@@ -26,7 +26,7 @@ enum Transcriber {
     static let aviationTerms = [
         "tach", "Hobbs", "condition inspection", "annual", "oil change", "oil filter",
         "spark plugs", "magneto", "safety wire", "torque", "torque seal", "cowling",
-        "service bulletin", "airworthiness directive", "squawk", "Van's", "RV-14",
+        "service bulletin", "airworthiness directive", "squawk", "Van's",
         "Lycoming", "propeller", "spinner", "brake pads", "tire pressure", "ELT"
     ]
 
@@ -38,7 +38,7 @@ enum Transcriber {
         }
     }
 
-    static func transcribe(url: URL) async throws -> String {
+    static func transcribe(url: URL, extraTerms: [String] = []) async throws -> String {
         guard await requestAuthorization() else { throw TranscriberError.notAllowed }
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")),
               recognizer.isAvailable else {
@@ -48,7 +48,7 @@ enum Transcriber {
         let request = SFSpeechURLRecognitionRequest(url: url)
         request.shouldReportPartialResults = false
         request.addsPunctuation = true
-        request.contextualStrings = aviationTerms
+        request.contextualStrings = aviationTerms + extraTerms.filter { !$0.isEmpty }
         if recognizer.supportsOnDeviceRecognition {
             request.requiresOnDeviceRecognition = true
         }

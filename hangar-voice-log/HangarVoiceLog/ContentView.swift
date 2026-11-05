@@ -1,15 +1,17 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// One scrolling page like the web Hangar Log: entry card, logbook queue, Access data.
+/// One scrolling page like the web Hangar Log: entry card and logbook queue.
+/// Aircraft, standard jobs and the optional Access link are in Settings.
 struct ContentView: View {
     @EnvironmentObject private var store: EntryStore
+    @EnvironmentObject private var settings: AppSettings
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var composing = ComposerRequest(entry: nil)
     @State private var queueTab: QueueTab = .open
-    @State private var choosingFolder = false
     @State private var banner: String?
+    @State private var showingSettings = false
 
     struct ComposerRequest: Equatable {
         let id = UUID()
@@ -17,9 +19,22 @@ struct ContentView: View {
     }
 
     enum QueueTab: String, CaseIterable, Identifiable {
-        case open = "In progress"
-        case sent = "Sent to Access"
+        case open, sent
         var id: String { rawValue }
+    }
+
+    private var linked: Bool { store.folderName != nil }
+
+    private func title(for tab: QueueTab) -> String {
+        switch tab {
+        case .open: return "In progress"
+        case .sent: return linked ? "Sent to Access" : "Logged"
+        }
+    }
+
+    /// The Performed-by name a new entry starts with.
+    private var defaultPerformer: String {
+        store.hangarData.maintainers.first { $0.id == HangarData.ownerId }?.name ?? settings.displayOwner
     }
 
     var body: some View {
@@ -28,6 +43,18 @@ struct ContentView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 18) {
+                        if let status = store.dataStatus {
+                            Button { showingSettings = true } label: {
+                                Text(status + " Tap to open Settings.")
+                                    .font(Theme.body(15))
+                                    .foregroundStyle(Theme.ink)
+                                    .multilineTextAlignment(.leading)
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Theme.warnSoft, in: RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                        }
                         if let banner {
                             Text(banner)
                                 .font(Theme.body(15))
@@ -36,7 +63,7 @@ struct ContentView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 10))
                         }
-                        ComposerView(existing: composing.entry) { message in
+                        ComposerView(existing: composing.entry, defaultPerformer: defaultPerformer) { message in
                             banner = message.isEmpty ? nil : message
                             composing = ComposerRequest(entry: nil)
                             withAnimation { proxy.scrollTo("top", anchor: .top) }
@@ -48,7 +75,6 @@ struct ContentView: View {
                             composing = ComposerRequest(entry: entry)
                             withAnimation { proxy.scrollTo("top", anchor: .top) }
                         }
-                        accessCard
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 18)
@@ -60,10 +86,20 @@ struct ContentView: View {
             .background(Theme.bg)
         }
         .background(Theme.bg)
-        .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { store.chooseFolder(url) }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView(isFirstRun: !settings.isSetUp)
+                .environmentObject(settings)
+                .environmentObject(store)
         }
-        .onAppear { store.refreshData() }
+        .onAppear {
+            store.refreshData()
+            if !settings.isSetUp { showingSettings = true }
+            switch DemoMode.screen {
+            case "entry": composing = ComposerRequest(entry: store.entries.first)
+            case "settings": showingSettings = true
+            default: break
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { store.refreshData() }
         }
@@ -72,21 +108,29 @@ struct ContentView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center) {
             (Text("HANGAR ").foregroundStyle(Theme.onSteel) + Text("LOG").foregroundStyle(Theme.accent))
                 .font(Theme.display(28))
                 .tracking(1)
+                .accessibilityLabel("Hangar Log")
             Spacer()
-            Text("N721NE · RV-14")
+            Text(settings.aircraftLine)
                 .font(Theme.data(13, relativeTo: .caption))
                 .tracking(1.3)
                 .foregroundStyle(Theme.onSteel.opacity(0.85))
+                .lineLimit(1)
+            Button { showingSettings = true } label: {
+                Image(systemName: "gearshape")
+                    .font(.title3)
+                    .foregroundStyle(Theme.onSteel)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            .accessibilityLabel("Settings")
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.leading, 20)
+        .padding(.trailing, 8)
+        .padding(.vertical, 4)
         .background(Theme.steel.ignoresSafeArea(edges: .top))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Hangar Log, N721NE, RV-14")
     }
 
     // MARK: Queue
@@ -100,17 +144,19 @@ struct ContentView: View {
             }
             HStack(spacing: 6) {
                 ForEach(QueueTab.allCases) { tab in
-                    Chip(title: tab.rawValue, selected: queueTab == tab) { queueTab = tab }
+                    Chip(title: title(for: tab), selected: queueTab == tab) { queueTab = tab }
                 }
             }
             if list.isEmpty {
                 VStack(spacing: 6) {
-                    Text(queueTab == .sent ? "Nothing sent yet" : (store.entries.isEmpty ? "No entries yet" : "All caught up"))
+                    Text(queueTab == .sent ? (linked ? "Nothing sent yet" : "Nothing logged yet") : (store.entries.isEmpty ? "No entries yet" : "All caught up"))
                         .font(Theme.bodySemibold(18))
                         .foregroundStyle(Theme.ink)
                     Text(queueTab == .sent
-                         ? "Entries move here once they're added to your Access import file."
-                         : "Pick a job above, add the details and photos, and tap Send to Access.")
+                         ? (linked ? "Entries move here once they're added to your Access import file."
+                                   : "Entries move here when you tap Mark as logged.")
+                         : (linked ? "Pick a job above, add the details and photos, and tap Send to Access."
+                                   : "Pick a job above, talk or type the details, add photos, then Share it to your logbook."))
                         .font(Theme.body(15))
                         .foregroundStyle(Theme.muted)
                         .multilineTextAlignment(.center)
@@ -126,57 +172,6 @@ struct ContentView: View {
                     }
                 }
             }
-        }
-        .card()
-    }
-
-    // MARK: Access data
-
-    private var accessCard: some View {
-        let data = store.hangarData
-        return VStack(alignment: .leading, spacing: 12) {
-            CardTitle(text: "From Access")
-            Group {
-                if let file = store.dataFileName {
-                    Text("Standard entries and Hobbs from your Maintenance Record database, refreshed \(LogbookFormatter.longDate(data.generatedAt)) (\(file)).")
-                } else {
-                    Text("Using the \(data.source ?? "built-in copy") of your standard entries and Hobbs. Choose your Dropbox folder to get daily updates.")
-                }
-            }
-            .font(Theme.body(15))
-            .foregroundStyle(Theme.muted)
-
-            if let status = store.dataStatus {
-                Text(status)
-                    .font(Theme.body(15))
-                    .foregroundStyle(Theme.ink)
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.warnSoft, in: RoundedRectangle(cornerRadius: 10))
-            }
-
-            if let folder = store.folderName {
-                Text("Folder: \(folder)")
-                    .font(Theme.data(13, relativeTo: .caption))
-                    .foregroundStyle(Theme.muted)
-            }
-
-            HStack(spacing: 10) {
-                if store.folderName == nil {
-                    Button("Choose Dropbox Folder") { choosingFolder = true }
-                        .buttonStyle(HangarButtonStyle(kind: .primary))
-                } else {
-                    Button(store.isLoadingData ? "Reading…" : "Reload") { store.refreshData() }
-                        .buttonStyle(HangarButtonStyle(kind: .primary))
-                        .disabled(store.isLoadingData)
-                    Button("Change Folder") { choosingFolder = true }
-                        .buttonStyle(HangarButtonStyle())
-                }
-            }
-
-            Text("Pick Dropbox › Dropbox Documents › N721NE › Maintenance Software. Finished entries go into Claude Logbook Import.txt there; then run ImportClaudeLogbookEntries in Access.")
-                .font(Theme.body(13, relativeTo: .footnote))
-                .foregroundStyle(Theme.muted)
         }
         .card()
     }
