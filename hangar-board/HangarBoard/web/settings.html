@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hangar Board settings</title>
+<style>
+body{margin:0;font:17px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f4f4f2;color:#1a1a1a}
+main{max-width:720px;margin:0 auto;padding:14px 14px 90px}
+h1{font-size:22px;margin:6px 0 4px}h2{font-size:18px;margin:22px 0 6px;color:#a3201b}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px 14px;margin:10px 0}
+label{display:block;font-size:14px;color:#555;margin:8px 0 3px}
+input,select,textarea{width:100%;box-sizing:border-box;font:inherit;padding:9px 10px;border:1px solid #bbb;border-radius:9px;background:#fff;min-height:44px}
+textarea{min-height:80px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+button{font:inherit;font-weight:600;padding:11px 16px;border-radius:10px;border:1px solid #999;background:#fff;min-height:46px;cursor:pointer}
+button.primary{background:#c62d26;color:#fff;border-color:#c62d26}
+.item{border:1px solid #ddd;border-radius:10px;padding:8px 10px;margin:8px 0;background:#fafafa}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 auto}
+.muted{color:#666;font-size:14px}.ok{color:#1e7b3a}.bad{color:#b3261e}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #ccc;padding:10px 14px;display:flex;gap:10px}
+.bar button{flex:1}
+pre{white-space:pre-wrap;font-size:13px;background:#f0f0ee;padding:8px;border-radius:8px}
+</style></head><body><main>
+<h1>Hangar Board</h1>
+<div class="muted" id="status">Loading…</div>
+
+<h2>Load from maintenance database</h2>
+<div class="card"><p class="muted">Pick <b>Maintenance Record_be.accdb</b> from the Files app (Dropbox folder). The file is only read, never changed.</p>
+<input type="file" id="dbFile" accept=".accdb,.mdb,application/octet-stream">
+<div id="dbOut" style="margin-top:8px"></div></div>
+
+<h2>Aircraft Hobbs time</h2>
+<div class="card"><div class="g2">
+<div><label for="tach">Current Hobbs hours</label><input id="tach" type="number" step="0.1" inputmode="decimal"></div>
+<div><label for="tachDate">As of</label><input id="tachDate" type="date"></div></div>
+<p class="muted">Update this after you fly so hour-based items, like oil changes, count down correctly.</p></div>
+
+<h2>Due items</h2>
+<div class="card"><div id="items"></div>
+<div class="row"><button onclick="addItem('a')">+ Aircraft item</button><button onclick="addItem('p')">+ Pilot item</button></div>
+<p class="muted">Items turn red (or get a ⚠ on black-and-white screens) when they're within the warning window or overdue.</p></div>
+
+<h2>Note</h2>
+<div class="card"><textarea id="note" maxlength="240" placeholder="Check left brake pad at next flight"></textarea></div>
+
+<h2>Board</h2>
+<div class="card"><div class="g2">
+<div><label for="tail">Aircraft</label><input id="tail" maxlength="10"></div>
+<div><label for="station">Weather station</label><input id="station" maxlength="4" placeholder="KTUS"></div>
+<div><label for="tz">Time zone</label><select id="tz">
+<option value="MST7">Arizona (no daylight saving)</option><option value="PST8PDT,M3.2.0,M11.1.0">Pacific</option>
+<option value="MST7MDT,M3.2.0,M11.1.0">Mountain</option><option value="CST6CDT,M3.2.0,M11.1.0">Central</option>
+<option value="EST5EDT,M3.2.0,M11.1.0">Eastern</option></select></div>
+<div><label for="refreshMin">Update every (minutes)</label><input id="refreshMin" type="number" min="5" max="120"></div>
+<div><label for="daCaution">Density altitude warning above (ft)</label><input id="daCaution" type="number" step="100"></div>
+<div><label for="staleMin">Weather out-of-date after (minutes)</label><input id="staleMin" type="number" min="30"></div>
+</div></div>
+
+<h2>Display and wiring</h2>
+<div class="card">
+<label for="panel">E-paper display</label><select id="panel">
+<option value="0">Good Display GDEY075Z08 (black, white, red)</option>
+<option value="1">Good Display GDEY075T7 (black and white)</option>
+<option value="2">Waveshare 7.5 inch V2 (black and white)</option></select>
+<label for="pinPreset">How it's wired</label><select id="pinPreset" onchange="showPins()">
+<option value="0">ESP32 dev board, standard wiring</option>
+<option value="1">Waveshare ESP32 e-Paper Driver Board</option>
+<option value="2">Custom pins</option></select>
+<div id="pins" class="g3" style="margin-top:6px"></div>
+<p class="muted">Changing the display or wiring restarts the board.</p></div>
+
+<h2>Backup and import</h2>
+<div class="card"><textarea id="io" placeholder="Paste settings here to import them"></textarea>
+<div class="row" style="margin-top:8px"><button onclick="doImport()">Import</button><button onclick="doExport()">Show current settings</button></div>
+<p class="muted" id="ioMsg"></p></div>
+
+<h2>Wi-Fi</h2>
+<div class="card"><p class="muted">Forget the saved Wi-Fi network and start the setup network again.</p>
+<button onclick="wifiReset()" id="wifiBtn">Reset Wi-Fi</button></div>
+
+<h2>Latest weather</h2>
+<div class="card"><pre id="raw">—</pre></div>
+</main>
+<div class="bar"><button onclick="refreshNow()">Refresh screen</button><button class="primary" onclick="save()">Save</button></div>
+<script>
+var cfg={}, PINS=['cs','dc','rst','busy','sck','mosi'];
+function $(i){return document.getElementById(i)}
+function msg(t,cls){var s=$('status');s.textContent=t;s.className='muted '+(cls||'')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function load(){fetch('/api/config').then(r=>r.json()).then(c=>{cfg=c;fill();status()}).catch(()=>msg('Could not reach the board','bad'))}
+function status(){fetch('/api/status').then(r=>r.json()).then(s=>{msg('Last screen update '+(s.updated||'not yet')+(s.wxError?' · weather: '+s.wxError:''), s.wxError?'bad':'ok');$('raw').textContent=(s.metar||'—')+'\n\n'+(s.taf||'')})}
+function fill(){['tail','station','refreshMin','daCaution','staleMin','tach','tachDate','note'].forEach(k=>{$(k).value=cfg[k]==null?'':cfg[k]});
+ $('tz').value=cfg.tz||'MST7';$('panel').value=cfg.panel;$('pinPreset').value=cfg.pinPreset;
+ if(!$('tachDate').value)$('tachDate').value=new Date().toISOString().slice(0,10);
+ showPins();renderItems()}
+function showPins(){var custom=$('pinPreset').value=='2',p=cfg.pins||{};
+ $('pins').innerHTML=PINS.map(k=>'<div><label for="pin_'+k+'">'+k.toUpperCase()+' pin</label><input id="pin_'+k+'" type="number" min="0" max="48" value="'+esc(p[k])+'" '+(custom?'':'disabled')+'></div>').join('')}
+function renderItems(){var h='';(cfg.items||[]).forEach((it,i)=>{var k=it.kind||'d',hrs=k!='d',dt=k!='h';
+ h+='<div class="item"><div class="g2"><div><label>Name'+(it.src=='db'?' <span class="muted">(from database)</span>':'')+'</label><input data-i="'+i+'" data-k="name" value="'+esc(it.name)+'"></div>'+
+ '<div><label>Group</label><select data-i="'+i+'" data-k="group"><option value="a"'+(it.group=='a'?' selected':'')+'>Aircraft</option><option value="p"'+(it.group=='p'?' selected':'')+'>Pilot</option></select></div>'+
+ '<div><label>Due by</label><select data-i="'+i+'" data-k="kind"><option value="d"'+(k=='d'?' selected':'')+'>Date</option><option value="h"'+(k=='h'?' selected':'')+'>Hobbs hours</option><option value="b"'+(k=='b'?' selected':'')+'>Hours or date, whichever first</option></select></div>'+
+ (hrs?'<div><label>Due at Hobbs</label><input type="number" step="0.1" data-i="'+i+'" data-k="dueHours" value="'+esc(it.dueHours)+'"></div>':'')+
+ (dt?'<div><label>Due date</label><input type="date" data-i="'+i+'" data-k="dueDate" value="'+esc(it.dueDate)+'"></div>':'')+
+ (hrs?'<div><label>Warn within (hours)</label><input type="number" step="0.5" data-i="'+i+'" data-k="warnHours" value="'+esc(it.warnHours==null?5:it.warnHours)+'"></div>':'')+
+ (dt?'<div><label>Warn within (days)</label><input type="number" data-i="'+i+'" data-k="warnDays" value="'+esc(it.warnDays==null?30:it.warnDays)+'"></div>':'')+
+ '<div style="display:flex;align-items:flex-end"><button onclick="delItem('+i+')" style="width:100%">Remove</button></div></div></div>'});
+ $('items').innerHTML=h||'<p class="muted">No items yet.</p>';
+ document.querySelectorAll('#items [data-k]').forEach(el=>el.addEventListener('change',function(){var it=cfg.items[+this.dataset.i],k=this.dataset.k,v=this.value;
+  if(['dueHours','warnHours','warnDays'].indexOf(k)>=0)v=parseFloat(v);it[k]=v;if(k=='name'&&it.src=='db')it.src='';if(k=='kind')renderItems()}))}
+function addItem(g){cfg.items=cfg.items||[];cfg.items.push({name:'',group:g,kind:'d',dueDate:'',warnDays:30});renderItems()}
+function delItem(i){cfg.items.splice(i,1);renderItems()}
+function gather(){['tail','station','tz','tachDate','note'].forEach(k=>cfg[k]=$(k).value);
+ ['refreshMin','daCaution','staleMin'].forEach(k=>cfg[k]=parseInt($(k).value)||cfg[k]);cfg.tach=parseFloat($('tach').value)||0;
+ cfg.panel=+$('panel').value;cfg.pinPreset=+$('pinPreset').value;cfg.pins=cfg.pins||{};
+ if(cfg.pinPreset==2)PINS.forEach(k=>cfg.pins[k]=parseInt($('pin_'+k).value));
+ cfg.items=(cfg.items||[]).filter(it=>it.name&&it.name.trim())}
+function save(){gather();post('/api/config',cfg).then(r=>{msg(r.restart?'Saved. The board is restarting…':'Saved. The screen will update in about 30 seconds.','ok');if(r.restart)setTimeout(load,15000)})}
+function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).catch(()=>{msg('Could not reach the board','bad');return{}})}
+function refreshNow(){post('/api/refresh').then(()=>msg('Updating the screen…','ok'))}
+function doImport(){try{var c=JSON.parse($('io').value);Object.assign(cfg,c);fill();$('ioMsg').textContent='Imported. Check it over, then tap Save.';$('ioMsg').className='ok'}catch(e){$('ioMsg').textContent='That text isn\'t valid settings.';$('ioMsg').className='bad'}}
+function doExport(){gather();$('io').value=JSON.stringify(cfg,null,1);$('ioMsg').textContent='Copy this text to keep a backup.';$('ioMsg').className='muted'}
+var wifiArmed=false;function wifiReset(){if(!wifiArmed){wifiArmed=true;$('wifiBtn').textContent='Tap again to confirm';setTimeout(()=>{wifiArmed=false;$('wifiBtn').textContent='Reset Wi-Fi'},5000);return}
+ post('/api/wifi-reset');msg('Wi-Fi forgotten. Join "HangarBoard-Setup" on your phone to set it up again.','ok')}
+
+var lastImport=null;
+function loadScript(src){return new Promise((ok,bad)=>{if(window.MDBReader&&src=='/mdb.js')return ok();var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=bad;document.head.appendChild(s)})}
+function fmtD(s){if(!s)return'';var p=s.split('-');var m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1];return m+' '+(+p[2])+', '+p[0]}
+function statusOf(it,hobbs){var today=new Date();today.setHours(0,0,0,0);var bad=false,soon=false,parts=[];
+ if(it.dueHours!=null){var l=it.dueHours-hobbs;parts.push(l<0?'overdue '+(-l).toFixed(1)+' hr':l.toFixed(1)+' hr left');if(l<0)bad=true;else if(l<=it.warnHours)soon=true}
+ if(it.dueDate){var p=it.dueDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]),n=Math.round((d-today)/864e5);parts.push(n<0?'overdue since '+fmtD(it.dueDate):fmtD(it.dueDate));if(n<0)bad=true;else if(n<=it.warnDays)soon=true}
+ return{text:parts.join(' / '),cls:bad?'bad':soon?'bad':'',flag:bad?'OVERDUE':soon?'Due soon':''}}
+$('dbFile').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var out=$('dbOut');out.innerHTML='<p class="muted">Reading '+esc(f.name)+'…</p>';
+ Promise.all([loadScript('/mdb.js'),loadScript('/dbimport.js'),f.arrayBuffer()]).then(r=>{
+  var reader=new MDBReader(Buffer.from(r[2]));var res=importMaintenance(reader,{tail:$('tail').value||cfg.tail});lastImport=res;
+  var h='<p><b>Hobbs '+res.hobbs.toFixed(1)+'</b> <span class="muted">(latest in '+esc(res.hobbsSource)+(res.hobbsDate?', '+fmtD(res.hobbsDate):'')+'). If you\'ve flown since, enter the current Hobbs below after importing.</span></p>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:15px">';
+  res.items.forEach((it,i)=>{var s=statusOf(it,res.hobbs);h+='<tr style="border-top:1px solid #ddd"><td style="padding:6px 4px"><label style="display:flex;gap:8px;align-items:flex-start;color:#1a1a1a;font-size:15px;margin:0"><input type="checkbox" data-imp="'+i+'" checked style="width:22px;min-height:22px;margin-top:2px"><span><b>'+esc(it.name)+'</b><br><span class="muted">'+esc(it.basis)+(it.lastDone?' · last done '+esc(/^\d/.test(it.lastDone)?fmtD(it.lastDone.slice(0,10))+it.lastDone.slice(10):it.lastDone.trim()):'')+'</span></span></label></td><td style="padding:6px 4px;text-align:right" class="'+s.cls+'">'+esc(s.text)+(s.flag?'<br><b>'+s.flag+'</b>':'')+'</td></tr>'});
+  h+='</table>';
+  if(res.skipped.length)h+='<p class="muted">Not included (no completion recorded): '+res.skipped.map(s=>esc(s.name)).join(', ')+'</p>';
+  h+='<p class="muted">Anything showing overdue that you know is done? The database may not have the latest completion date. Untick it, or import and then fix the date under Due items.</p>';
+  h+='<button class="primary" onclick="applyImport()" style="width:100%">Use these items</button>';
+  out.innerHTML=h;
+ }).catch(e=>{out.innerHTML='<p class="bad">Couldn\'t read that file: '+esc(e&&e.message||e)+'. Make sure it\'s the _be.accdb file and that it has finished downloading.</p>'})});
+function applyImport(){if(!lastImport)return;var keep=(cfg.items||[]).filter(it=>it.src!='db');
+ var pick=[];document.querySelectorAll('[data-imp]').forEach(cb=>{if(cb.checked)pick.push(lastImport.items[+cb.dataset.imp])});
+ cfg.items=pick.map(it=>({name:it.name,group:'a',kind:it.kind,dueDate:it.dueDate||'',dueHours:it.dueHours||0,warnDays:it.warnDays||30,warnHours:it.warnHours||5,src:'db'})).concat(keep);
+ if(lastImport.hobbs>(parseFloat($('tach').value)||0)){$('tach').value=lastImport.hobbs.toFixed(1);if(lastImport.hobbsDate)$('tachDate').value=lastImport.hobbsDate}
+ renderItems();$('dbOut').innerHTML='<p class="ok">'+pick.length+' items added. Your own items (like pilot currency) were kept. Review below, then tap Save.</p>';$('items').scrollIntoView({behavior:'smooth'})}
+load();
+</script></body></html>
