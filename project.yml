@@ -36,6 +36,7 @@ targets:
           - IBMPlexMono-Medium.ttf
         UIUserInterfaceStyle: Automatic
         LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dfwilley.hangarvoicelog
