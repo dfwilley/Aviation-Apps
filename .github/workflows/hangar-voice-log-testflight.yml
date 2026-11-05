@@ -1,13 +1,21 @@
-name: Upload to TestFlight
+name: Hangar Voice Log - upload to TestFlight
 
 # Builds a signed copy of the app and uploads it to App Store Connect, where it
 # shows up in TestFlight for you and anyone in your internal testing group.
+# Build numbers start at 1001 so they stay higher than builds uploaded from the old Hangar-Voice-Log repo.
 # Needs these repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID.
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'hangar-voice-log/**'
+      - '.github/workflows/hangar-voice-log-testflight.yml'
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: hangar-voice-log
 
 jobs:
   testflight:
@@ -93,7 +101,7 @@ jobs:
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
             -archivePath build/HangarVoiceLog.xcarchive \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CURRENT_PROJECT_VERSION=$(( ${{ github.run_number }} + 1000 )) \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
@@ -132,7 +140,7 @@ jobs:
           IPA=$(ls build/export/*.ipa | head -1)
           API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/keys" xcrun altool --upload-app -f "$IPA" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
-          echo "Uploaded build ${{ github.run_number }}. Apple takes about 5-30 minutes to process it before it appears in TestFlight."
+          echo "Uploaded build $(( ${{ github.run_number }} + 1000 )). Apple takes about 5-30 minutes to process it before it appears in TestFlight."
 
       - name: Revoke the temporary certificate and profile
         if: always()

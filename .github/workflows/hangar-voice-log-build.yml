@@ -1,12 +1,19 @@
-name: Build iPhone app
+name: Hangar Voice Log - build iPhone app
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'hangar-voice-log/**'
+      - '.github/workflows/hangar-voice-log-build.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+defaults:
+  run:
+    working-directory: hangar-voice-log
 
 jobs:
   build:
@@ -91,14 +98,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HangarVoiceLog-ipa
-          path: build/HangarVoiceLog.ipa
+          path: hangar-voice-log/build/HangarVoiceLog.ipa
 
       - name: Publish to the Releases page
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="build-${{ github.run_number }}"
+          TAG="hangar-voice-log-build-${{ github.run_number }}"
           gh release create "$TAG" build/HangarVoiceLog.ipa build/screenshot-light.png build/screenshot-dark.png \
             --title "Hangar Log build ${{ github.run_number }}" \
-            --notes "Unsigned app file. Install it with Sideloadly using your Apple ID (see INSTALL.md)." \
-            --latest
+            --notes "Unsigned app file. Install it with Sideloadly using your Apple ID (see INSTALL.md)."

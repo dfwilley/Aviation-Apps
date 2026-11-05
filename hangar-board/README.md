@@ -2,7 +2,7 @@
 
 ESP32 + 7.5" e-paper hangar status board: current METAR (decoded), TAF with a plain-language summary, density altitude, sunrise/sunset, aircraft maintenance and pilot currency due items, and a note. Due items can be loaded from the Access maintenance database (Recurring Maintenance and Service Bulletins tables, read-only) on the board's settings page. Out-of-limits items turn red on the GDEY075Z08 three-color panel (⚠ marker on black-and-white panels).
 
-**Install:** open the GitHub Pages site for this repository in Chrome or Edge on a computer and click *Connect and install*.
+**Install:** open https://dfwilley.github.io/Aviation-Apps/hangar-board/ in Chrome or Edge on a computer and click *Connect and install*.
 
 Supported displays: Good Display GDEY075Z08 (black/white/red), Good Display GDEY075T7, Waveshare 7.5" V2. Supported boards: ESP32, ESP32-S3.
 

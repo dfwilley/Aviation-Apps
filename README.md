@@ -1,0 +1,20 @@
+# Aviation Apps
+
+N721NE and flying-related apps, kept together in one place. Each app lives in its own folder.
+
+| App | Folder | Kind | How to get it |
+|---|---|---|---|
+| Hangar Voice Log | `hangar-voice-log/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page |
+| Weight & Balance | `weight-and-balance/` | Native iPhone | `.ipa` on the Releases page |
+| Cruise Perf | `cruise-performance/` | Native iPhone | Actions → *Cruise Perf - build iPhone app* → Run workflow |
+| Hangar Board | `hangar-board/` | ESP32 e-paper board | Installer page: https://dfwilley.github.io/Aviation-Apps/hangar-board/ |
+
+## Builds
+
+The build setups are in `.github/workflows/`. Each one runs only when files in its own app folder change, so editing one app doesn't rebuild the others. Release tags start with the app's folder name (for example `hangar-voice-log-build-12`).
+
+The TestFlight upload for Hangar Voice Log needs four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`.
+
+## History
+
+These apps used to be separate repositories (Hangar-Voice-Log, Hangar-Board, Weight-And-Balance, Cruise-Performance). Their full commit history was brought over.

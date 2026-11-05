@@ -1,12 +1,16 @@
-name: Build iPhone app
+name: Weight & Balance - build iPhone app
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'weight-and-balance/**'
+      - '.github/workflows/weight-and-balance-build.yml'
   workflow_dispatch:
 
 defaults:
   run:
+    working-directory: weight-and-balance
     shell: bash
 
 permissions:
@@ -65,23 +69,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: N721NE-Weight-and-Balance-ipa
-          path: N721NE-Weight-and-Balance.ipa
+          path: weight-and-balance/N721NE-Weight-and-Balance.ipa
           retention-days: 90
 
-      - name: Publish the .ipa as the latest release
+      - name: Publish the .ipa on the Releases page
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="build-${{ github.run_number }}"
+          TAG="weight-and-balance-build-${{ github.run_number }}"
           gh release create "$TAG" N721NE-Weight-and-Balance.ipa \
             --repo "${{ github.repository }}" \
             --title "N721NE Weight & Balance (build ${{ github.run_number }})" \
-            --notes "Download N721NE-Weight-and-Balance.ipa below and install it with Sideloadly. Built from commit ${GITHUB_SHA:0:7}." \
-            --latest
+            --notes "Download N721NE-Weight-and-Balance.ipa below and install it with Sideloadly. Built from commit ${GITHUB_SHA:0:7}."
 
       - name: Save logs if something failed
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: "*.log"
+          path: "weight-and-balance/*.log"

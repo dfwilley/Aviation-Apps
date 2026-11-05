@@ -14,8 +14,8 @@ You only do Part 1 once. After that, each new version is just Part 2.
 
 ## Part 2 — Get the app file
 
-1. Open https://github.com/dfwilley/Hangar-Voice-Log/releases
-2. Under the newest build, click **HangarVoiceLog.ipa** to download it.
+1. Open https://github.com/dfwilley/Aviation-Apps/releases
+2. Under the newest **Hangar Log build** (tag starts with `hangar-voice-log-`), click **HangarVoiceLog.ipa** to download it.
 
 ## Part 3 — Put it on the iPhone
 

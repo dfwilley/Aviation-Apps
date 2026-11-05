@@ -1,7 +1,11 @@
-name: iOS IPA
+name: Cruise Perf - build iPhone app (run by hand)
 
 on:
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: cruise-performance
 
 jobs:
   ipa:
@@ -46,4 +50,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CruisePerformance-ipa
-          path: CruisePerformance.ipa
+          path: cruise-performance/CruisePerformance.ipa

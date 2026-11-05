@@ -13,4 +13,4 @@ Native iPhone version of the N721NE Cruise Fuel Burn web app. Everything in the 
 
 ## Build and install
 
-Run **Actions → iOS IPA → Run workflow**. The build first checks the app's math against numbers produced by the web app's own code (`ios/ModelCheck`), then builds `CruisePerformance.ipa`. Download the artifact and install it with Sideloadly using your Apple ID.
+Run **Actions → Cruise Perf - build iPhone app (run by hand) → Run workflow**. The build first checks the app's math against numbers produced by the web app's own code (`ios/ModelCheck`), then builds `CruisePerformance.ipa`. Download the artifact and install it with Sideloadly using your Apple ID.
