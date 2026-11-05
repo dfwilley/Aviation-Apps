@@ -59,8 +59,12 @@ def main():
             "identifier": bundle_id, "name": name, "platform": "IOS"}}})
         print(f"Registered bundle ID {bundle_id}.")
 
-    apps = call("GET", f"/apps?filter[bundleId]={q}")["data"]
-    if not any(a["attributes"]["bundleId"] == bundle_id for a in apps):
+    apps = [a for a in call("GET", "/apps?limit=200")["data"]
+            if a["attributes"]["bundleId"] == bundle_id]
+    if not apps:
+        seen = call("GET", "/apps?limit=200")["data"]
+        print("Apps this key can see:", [
+            (a["attributes"]["name"], a["attributes"]["bundleId"]) for a in seen] or "none")
         sys.exit(
             "::error::No app record in App Store Connect yet. One-time fix: "
             "appstoreconnect.apple.com > Apps > + > New App > Platform iOS, "
