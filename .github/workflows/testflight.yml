@@ -59,8 +59,10 @@ jobs:
           python3 tools/asc_precheck.py "$BUNDLE_ID" "$APP_NAME"
 
       - name: Create temporary signing certificate and profile
+        run: python3 tools/asc_signing.py create "$BUNDLE_ID" "$RUNNER_TEMP/signing"
+
+      - name: Install the certificate and profile on the build machine
         run: |
-          python3 tools/asc_signing.py create "$BUNDLE_ID" "$RUNNER_TEMP/signing"
           KC="$RUNNER_TEMP/build.keychain-db"
           KC_PW=$(openssl rand -hex 16)
           security create-keychain -p "$KC_PW" "$KC"
