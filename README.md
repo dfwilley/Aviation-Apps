@@ -16,6 +16,10 @@ The build setups are in `.github/workflows/`. Each one runs only when files in i
 
 The TestFlight upload for Hangar Voice Log needs four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`.
 
+## App Store pages
+
+Hangar Voice Log's privacy policy and support pages are `hangar-voice-log/privacy.html` and `hangar-voice-log/support.html`, served at https://dfwilley.github.io/Aviation-Apps/hangar-voice-log/privacy.html and .../support.html. The build workflow also saves App Store screenshots (demo data, 1206 × 2622) to each Hangar Voice Log release.
+
 ## History
 
 These apps used to be separate repositories (Hangar-Voice-Log, Hangar-Board, Weight-And-Balance, Cruise-Performance, Fuel-Planner). Their full commit history was brought over.

@@ -119,6 +119,7 @@ struct ContentView: View {
                 .tracking(1.3)
                 .foregroundStyle(Theme.onSteel.opacity(0.85))
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Button { showingSettings = true } label: {
                 Image(systemName: "gearshape")
                     .font(.title3)
