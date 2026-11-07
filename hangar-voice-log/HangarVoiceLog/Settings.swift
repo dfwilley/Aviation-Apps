@@ -14,6 +14,9 @@ final class AppSettings: ObservableObject {
     let isDemo: Bool
     private let defaults = UserDefaults.standard
 
+    static let defaultTail = "N721NE"
+    static let defaultModel = "RV-14"
+
     static let privacyURL = URL(string: "https://dfwilley.github.io/Aviation-Apps/hangar-voice-log/privacy.html")!
     static let supportURL = URL(string: "https://dfwilley.github.io/Aviation-Apps/hangar-voice-log/support.html")!
 
@@ -33,8 +36,9 @@ final class AppSettings: ObservableObject {
             customJobs = DemoMode.jobs
             return
         }
-        tailNumber = defaults.string(forKey: Key.tail) ?? ""
-        model = defaults.string(forKey: Key.model) ?? ""
+        // Personal (TestFlight / Sideloadly) build: starts set up for N721NE.
+        tailNumber = defaults.string(forKey: Key.tail) ?? Self.defaultTail
+        model = defaults.string(forKey: Key.model) ?? Self.defaultModel
         ownerName = defaults.string(forKey: Key.owner) ?? ""
         if let data = defaults.data(forKey: Key.jobs),
            let jobs = try? JSONDecoder().decode([HangarData.Job].self, from: data) {
@@ -217,7 +221,7 @@ struct SettingsView: View {
     private var accessCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             CardTitle(text: "Access database link")
-            Text("Optional. Only for owners who keep their logbook in a Microsoft Access database set up to import Hangar Log entries. Most people can skip this and use Share instead.")
+            Text("Pick Dropbox › Dropbox Documents › N721NE › Maintenance Software. The app reads your standard jobs and last Hobbs from the newest Hangar Log Data file there, and adds finished entries to the import file for ImportClaudeLogbookEntries in Access.")
                 .font(Theme.body(15))
                 .foregroundStyle(Theme.muted)
 

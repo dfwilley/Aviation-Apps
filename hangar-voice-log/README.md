@@ -10,18 +10,24 @@ A native iPhone app for recording maintenance work on N721NE by voice.
 
 Nothing leaves the phone unless you share or export it.
 
-## How it's built
+## How it's built and installed
 
-There's no Mac involved. Each push to `main` runs a GitHub Actions job on
-GitHub's free macOS machines. That job:
+There's no Mac involved. GitHub Actions builds the app on GitHub's macOS machines:
 
-1. Generates the Xcode project from `project.yml` (XcodeGen).
-2. Runs the unit tests on an iPhone simulator.
-3. Builds an unsigned `HangarVoiceLog.ipa`.
-4. Publishes the file on the [Releases page](../../releases).
+- **Hangar Voice Log - build iPhone app** runs the tests and publishes an unsigned
+  `HangarVoiceLog.ipa` on the Releases page, for Sideloadly.
+- **Hangar Voice Log - upload to TestFlight** signs the app and uploads it to
+  App Store Connect for TestFlight.
 
-Installation on the iPhone uses Sideloadly on Windows. See
-[INSTALL.md](INSTALL.md).
+Both run on every push to `main` that changes this folder. See
+[INSTALL.md](INSTALL.md) for installing either way.
+
+## Data from Access
+
+A daily Claude scheduled task runs `tools/make_hangar_data.py` on
+`Maintenance Record_be.accdb` and, when something changed, saves a new
+`Hangar Log Data <date>.json` in Dropbox › Dropbox Documents › N721NE ›
+Maintenance Software. The app reads the newest one when it opens.
 
 ## Files
 
@@ -29,5 +35,7 @@ Installation on the iPhone uses Sideloadly on Windows. See
 |---|---|
 | `project.yml` | Project definition (app settings, permissions, targets) |
 | `HangarVoiceLog/` | App source code (SwiftUI) |
-| `HangarVoiceLogTests/` | Unit tests for the logbook text and spreadsheet export |
-| `.github/workflows/build.yml` | Cloud build |
+| `HangarVoiceLogTests/` | Unit tests |
+| `tools/make_hangar_data.py` | Builds the Hangar Log Data file from Access |
+| `tools/asc_*.py` | TestFlight signing and upload helpers |
+| `../.github/workflows/hangar-voice-log-*.yml` | Cloud builds |

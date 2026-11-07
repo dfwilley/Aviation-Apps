@@ -4,7 +4,7 @@ N721NE and flying-related apps, kept together in one place. Each app lives in it
 
 | App | Folder | Kind | How to get it |
 |---|---|---|---|
-| Hangar Voice Log | `hangar-voice-log/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page |
+| Hangar Voice Log | `hangar-voice-log/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page with Sideloadly (see `hangar-voice-log/INSTALL.md`) |
 | Weight & Balance | `weight-and-balance/` | Native iPhone | `.ipa` on the Releases page |
 | Cruise Perf | `cruise-performance/` | Native iPhone | Actions → *Cruise Perf - build iPhone app* → Run workflow |
 | Fuel Planner | `fuel-planner/` | Web app | https://dfwilley.github.io/Aviation-Apps/fuel-planner/ |
@@ -16,9 +16,9 @@ The build setups are in `.github/workflows/`. Each one runs only when files in i
 
 The TestFlight upload for Hangar Voice Log needs four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`.
 
-## App Store pages
+## Help pages
 
-Hangar Voice Log's privacy policy and support pages are `hangar-voice-log/privacy.html` and `hangar-voice-log/support.html`, served at https://dfwilley.github.io/Aviation-Apps/hangar-voice-log/privacy.html and .../support.html. The build workflow also saves App Store screenshots (demo data, 1206 × 2622) to each Hangar Voice Log release.
+Hangar Voice Log's privacy and help pages (linked from the app's Settings) are `hangar-voice-log/privacy.html` and `hangar-voice-log/support.html`, served at https://dfwilley.github.io/Aviation-Apps/hangar-voice-log/.
 
 ## History
 

@@ -79,7 +79,11 @@ final class EntryStore: ObservableObject {
 
     /// Reads the newest Hangar Log Data file from Dropbox. Called each time the app opens.
     func refreshData() {
-        guard !isDemo, AccessFolder.isChosen, !isLoadingData else { return }
+        guard !isDemo, !isLoadingData else { return }
+        guard AccessFolder.isChosen else {
+            dataStatus = "Link your Dropbox Maintenance Software folder to get your standard jobs and last Hobbs from Access."
+            return
+        }
         isLoadingData = true
         dataStatus = nil
         Task.detached {
