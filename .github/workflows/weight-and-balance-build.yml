@@ -28,20 +28,57 @@ jobs:
       - name: Create the Xcode project
         run: xcodegen generate
 
+      - name: Check the shared math with the web app's tests
+        run: node web/test.js
+
       - name: Run tests on an iPhone simulator
         run: |
-          DEVICE=$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' | head -1 | sed -E 's/^[[:space:]]+//; s/ \(.*//')
-          echo "Testing on: $DEVICE"
+          # Newest iPhone simulator; a Pro model if there is one (its 6.3 inch screen suits App Store screenshots)
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)["devices"]
+          for runtime in sorted([k for k in data if "iOS" in k], reverse=True):
+              phones = [d for d in data[runtime] if d["name"].startswith("iPhone")]
+              pro = [d for d in phones if d["name"].endswith(" Pro")]
+              if phones:
+                  d = (pro or phones)[0]
+                  print(d["udid"]); sys.stderr.write("Simulator: %s (%s)\n" % (d["name"], runtime)); sys.exit(0)
+          sys.exit("No iPhone simulator found")
+          ')
+          echo "SIM_ID=$SIM_ID" >> "$GITHUB_ENV"
           xcodebuild test \
             -project WeightAndBalance.xcodeproj \
             -scheme WeightAndBalance \
-            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -destination "id=$SIM_ID" \
+            -derivedDataPath build/sim \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log | grep -E "error:|warning: .*\.swift|Test Case|Executed|\*\* TEST" || true
-          echo "::notice::Simulator: $DEVICE"
           if ! grep -q "\*\* TEST SUCCEEDED \*\*" test.log; then
-            grep -E "error:|: error|failed|Failing|xcodebuild: error|Unable to find" test.log | sort -u | head -10 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
+            grep -E "error:|: error|failed|Failing|xcodebuild: error|Unable to find" test.log | sort -u | head -20 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
             exit 1
           fi
+
+      - name: Take App Store screenshots (sample aircraft N512PT)
+        continue-on-error: true
+        run: |
+          APP=$(find build/sim/Build/Products -name "WeightAndBalance.app" -maxdepth 2 | head -1)
+          BID=com.dfwilley.weightandbalance
+          mkdir -p shots
+          xcrun simctl boot "$SIM_ID" || true
+          xcrun simctl bootstatus "$SIM_ID" -b
+          xcrun simctl install "$SIM_ID" "$APP"
+          xcrun simctl status_bar "$SIM_ID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+          shot() { # name, appearance, extra launch arguments
+            xcrun simctl ui "$SIM_ID" appearance "$2"
+            xcrun simctl terminate "$SIM_ID" "$BID" 2>/dev/null || true
+            xcrun simctl launch "$SIM_ID" "$BID" -demo ${3:-}
+            sleep 8
+            xcrun simctl io "$SIM_ID" screenshot "shots/$1.png"
+          }
+          shot 1-loading light
+          shot 2-limits light "-demoScreen limits"
+          shot 3-aircraft light "-demoScreen setup"
+          shot 4-loading-dark dark
+          ls -l shots
 
       - name: Build for iPhone (unsigned)
         run: |
@@ -62,14 +99,14 @@ jobs:
         run: |
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/WeightAndBalance.app Payload/
-          zip -qry N721NE-Weight-and-Balance.ipa Payload
-          ls -l N721NE-Weight-and-Balance.ipa
+          zip -qry Homebuilt-WB.ipa Payload
+          ls -l Homebuilt-WB.ipa
 
       - name: Save the .ipa for download
         uses: actions/upload-artifact@v4
         with:
-          name: N721NE-Weight-and-Balance-ipa
-          path: weight-and-balance/N721NE-Weight-and-Balance.ipa
+          name: Homebuilt-WB-ipa
+          path: weight-and-balance/Homebuilt-WB.ipa
           retention-days: 90
 
       - name: Publish the .ipa on the Releases page
@@ -77,10 +114,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="weight-and-balance-build-${{ github.run_number }}"
-          gh release create "$TAG" N721NE-Weight-and-Balance.ipa \
+          gh release create "$TAG" Homebuilt-WB.ipa $(ls shots/*.png 2>/dev/null) \
             --repo "${{ github.repository }}" \
-            --title "N721NE Weight & Balance (build ${{ github.run_number }})" \
-            --notes "Download N721NE-Weight-and-Balance.ipa below and install it with Sideloadly. Built from commit ${GITHUB_SHA:0:7}."
+            --target "$GITHUB_SHA" \
+            --title "Homebuilt W&B (build ${{ github.run_number }})" \
+            --notes "Homebuilt-WB.ipa installs with Sideloadly. The .png files are App Store screenshots made with a sample aircraft. For TestFlight, see the Weight & Balance - upload to TestFlight workflow. Built from commit ${GITHUB_SHA:0:7}."
 
       - name: Save logs if something failed
         if: failure()

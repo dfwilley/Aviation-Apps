@@ -1,15 +1,16 @@
 import SwiftUI
 
-/// Weight vs CG with the utility and aerobatic envelopes, drawn on the same 440 × 340 layout as the web app.
+/// Weight vs CG with the aircraft's envelopes, drawn on the same 440 × 340 layout as the web app.
 struct EnvelopeChart: View {
+    let profile: WBProfile
     let result: WBResult
     @Environment(\.colorScheme) private var scheme
 
     private let L: CGFloat = 50, R: CGFloat = 430, T: CGFloat = 14, B: CGFloat = 296
-    private let x0 = 80.0, x1 = 90.0, y0 = 1200.0, y1 = 2150.0
+    private var range: WBChartRange { WB.chartRange(profile, result) }
 
-    private func X(_ c: Double) -> CGFloat { L + CGFloat((c - x0) / (x1 - x0)) * (R - L) }
-    private func Y(_ w: Double) -> CGFloat { B - CGFloat((w - y0) / (y1 - y0)) * (B - T) }
+    private func X(_ c: Double) -> CGFloat { L + CGFloat((c - range.x0) / (range.x1 - range.x0)) * (R - L) }
+    private func Y(_ w: Double) -> CGFloat { B - CGFloat((w - range.y0) / (range.y1 - range.y0)) * (B - T) }
 
     var body: some View {
         Canvas { ctx, size in
@@ -20,7 +21,7 @@ struct EnvelopeChart: View {
         .aspectRatio(440.0 / 340.0, contentMode: .fit)
         .frame(maxWidth: 640)
         .accessibilityElement()
-        .accessibilityLabel("Weight versus center of gravity with the utility and aerobatic envelopes")
+        .accessibilityLabel("Weight versus center of gravity with the loading envelope")
         .accessibilityValue("Takeoff \(WB.fmt(result.toW)) pounds at \(WB.fmt(result.toCG, 2)) inches. Landing \(WB.fmt(result.lW)) pounds at \(WB.fmt(result.lCG, 2)) inches.")
     }
 
@@ -46,15 +47,16 @@ struct EnvelopeChart: View {
         let thin = StrokeStyle(lineWidth: 1)
 
         // Grid and axis numbers
-        for c in 80...90 {
-            let x = X(Double(c))
+        let g = range
+        for c in stride(from: g.x0, through: g.x1 + 0.001, by: g.xStep) {
+            let x = X(c)
             line(&ctx, CGPoint(x: x, y: T), CGPoint(x: x, y: B), rule, thin)
-            ctx.draw(label("\(c)"), at: CGPoint(x: x, y: B + 16), anchor: .bottom)
+            ctx.draw(label(WB.plain(c)), at: CGPoint(x: x, y: B + 16), anchor: .bottom)
         }
-        for w in stride(from: 1200, through: 2100, by: 100) {
-            let y = Y(Double(w))
+        for w in stride(from: g.y0, through: g.y1 + 0.001, by: g.yStep) {
+            let y = Y(w)
             line(&ctx, CGPoint(x: L, y: y), CGPoint(x: R, y: y), rule, thin)
-            ctx.draw(label(WB.fmt(Double(w))), at: CGPoint(x: L - 6, y: y), anchor: .trailing)
+            ctx.draw(label(WB.fmt(w)), at: CGPoint(x: L - 6, y: y), anchor: .trailing)
         }
         ctx.draw(label("CG, inches aft of datum"), at: CGPoint(x: (L + R) / 2, y: B + 34), anchor: .bottom)
         var rot = ctx
@@ -63,21 +65,19 @@ struct EnvelopeChart: View {
         rot.draw(label("Weight, lb"), at: .zero, anchor: .center)
 
         // Envelopes: the selected category is solid and stronger
-        let utilityOn = result.category == .utility
-        let fwd = Limits.forwardCG
-        let uRect = CGRect(x: X(fwd), y: Y(Limits.grossUtility),
-                           width: X(Limits.aftCGUtility) - X(fwd), height: Y(y0) - Y(Limits.grossUtility))
-        let aRect = CGRect(x: X(fwd), y: Y(Limits.grossAerobatic),
-                           width: X(Limits.aftCGAerobatic) - X(fwd), height: Y(y0) - Y(Limits.grossAerobatic))
-        ctx.fill(Path(uRect), with: .color(env.opacity(utilityOn ? 0.12 : 0.05)))
-        ctx.stroke(Path(uRect), with: .color(env), lineWidth: utilityOn ? 2 : 1)
-        ctx.fill(Path(aRect), with: .color(env2.opacity(utilityOn ? 0.05 : 0.14)))
-        ctx.stroke(Path(aRect), with: .color(env2),
-                   style: StrokeStyle(lineWidth: utilityOn ? 1 : 2, dash: utilityOn ? [5, 4] : []))
-        ctx.draw(label("Utility \(WB.fmt(Limits.grossUtility)) lb", bold: true),
-                 at: CGPoint(x: X(fwd) + 4, y: Y(Limits.grossUtility) - 4), anchor: .bottomLeading)
-        ctx.draw(label("Aerobatic \(WB.fmt(Limits.grossAerobatic)) lb", bold: true),
-                 at: CGPoint(x: X(fwd) + 4, y: Y(Limits.grossAerobatic) + 14), anchor: .bottomLeading)
+        let selected = profile.twoCats && profile.cat == 1 ? 1 : 0
+        for (i, c) in profile.cats.enumerated() where (i == 0 || profile.twoCats) && c.ready && i < 2 {
+            let on = i == selected
+            let color = i == 0 ? env : env2
+            let gross = WB.value(c.gross), fwd = WB.value(c.fwd), aft = WB.value(c.aft)
+            let rect = CGRect(x: X(fwd), y: Y(gross), width: X(aft) - X(fwd), height: Y(g.y0) - Y(gross))
+            ctx.fill(Path(rect), with: .color(color.opacity(on ? 0.13 : 0.05)))
+            ctx.stroke(Path(rect), with: .color(color),
+                       style: StrokeStyle(lineWidth: on ? 2 : 1, dash: on ? [] : [5, 4]))
+            let labelY: CGFloat = i == 0 ? Y(gross) - 4 : Y(gross) + 14
+            ctx.draw(label("\(c.name) \(WB.fmt(gross)) lb", bold: true),
+                     at: CGPoint(x: X(fwd) + 4, y: labelY), anchor: .bottomLeading)
+        }
 
         // Takeoff, landing and zero-fuel points, kept on the chart if they fall off it
         func P(_ c: Double, _ w: Double) -> CGPoint {

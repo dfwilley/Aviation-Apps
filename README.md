@@ -5,7 +5,7 @@ N721NE and flying-related apps, kept together in one place. Each app lives in it
 | App | Folder | Kind | How to get it |
 |---|---|---|---|
 | Hangar Voice Log | `hangar-voice-log/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page with Sideloadly (see `hangar-voice-log/INSTALL.md`) |
-| Weight & Balance | `weight-and-balance/` | Native iPhone | `.ipa` on the Releases page |
+| Homebuilt W&B (weight and balance) | `weight-and-balance/` | Native iPhone and web | TestFlight, the `.ipa` on the Releases page, or the web app: https://dfwilley.github.io/Aviation-Apps/weight-and-balance/web/ |
 | Cruise Perf | `cruise-performance/` | Native iPhone | Actions → *Cruise Perf - build iPhone app* → Run workflow |
 | Fuel Planner | `fuel-planner/` | Web app | https://dfwilley.github.io/Aviation-Apps/fuel-planner/ |
 | Hangar Board | `hangar-board/` | ESP32 e-paper board | Installer page: https://dfwilley.github.io/Aviation-Apps/hangar-board/ |
@@ -14,7 +14,7 @@ N721NE and flying-related apps, kept together in one place. Each app lives in it
 
 The build setups are in `.github/workflows/`. Each one runs only when files in its own app folder change, so editing one app doesn't rebuild the others. Release tags start with the app's folder name (for example `hangar-voice-log-build-12`).
 
-The TestFlight upload for Hangar Voice Log needs four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`.
+The TestFlight uploads need four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`.
 
 ## Help pages
 
