@@ -18,7 +18,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 | Folder | What it is | How it is built |
 |---|---|---|
 | `hangar-voice-log/` | Native iPhone app (SwiftUI). Voice notes become draft maintenance logbook entries. Shows on the phone as "Hangar Log". Bundle ID `com.dfwilley.hangarvoicelog` | XcodeGen from `project.yml` |
-| `weight-and-balance/` | Native iPhone app (SwiftUI). Bundle ID `com.dfwilley.weightandbalance` | XcodeGen from `project.yml` |
+| `weight-and-balance/` | "Homebuilt W&B": native iPhone app (SwiftUI) for any registration, with RV model defaults, plus a matching web app in `web/`. Bundle ID `com.dfwilley.weightandbalance` | XcodeGen from `project.yml` |
 | `cruise-performance/` | Native iPhone app (SwiftUI), "Cruise Perf". Bundle ID `com.n721ne.cruise` | Checked-in Xcode project in `ios/` (no XcodeGen) |
 | `fuel-planner/` | Web app, plain HTML and JavaScript, no build step | GitHub Pages |
 | `hangar-board/` | Arduino firmware for an ESP32 e-paper status board, plus a web installer page | Arduino IDE; compiled `.bin` files are checked in under `firmware/` |
@@ -42,7 +42,7 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 ## Tests and checks
 
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
-- Weight & Balance: `WeightAndBalanceTests/` checks results against the original web app's numbers.
+- Weight & Balance: `WeightAndBalanceTests/` checks results against the web app's numbers. `web/wb-core.js` and `WBModel.swift` hold the same math and model defaults; change both together and run `node web/test.js`. Model defaults come from Van's weight and balance quick-reference sheets (sources listed in `weight-and-balance/README.md`).
 - Cruise Perf: `cruise-performance/ios/ModelCheck/` compares the Swift math with `expected.json`, which was produced by the web app's own code.
 - These need a Mac, so they run in GitHub Actions, not locally on Linux or Windows. To test before merging, push to a branch and run the build workflow by hand on that branch (it has a "Run workflow" button).
 
@@ -55,7 +55,7 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 - Hangar Log was submitted to the App Store once and rejected (see `hangar-voice-log/INSTALL.md`). The owner chose TestFlight and Sideloadly instead. Don't resubmit or change App Store settings unless asked.
 - Hangar Board: after editing anything in `hangar-board/HangarBoard/web/`, run `python3 tools/embed.py` to regenerate `web_assets.h`. There is no cloud build for the firmware; new `.bin` files have to be compiled in the Arduino IDE and checked in.
 - Fuel Planner's prices are a fixed snapshot (dated in its README). They do not update themselves.
-- Some README text lags behind: the top README and `weight-and-balance/README.md` still describe Weight & Balance and Cruise Perf as Sideloadly-only, but both now upload to TestFlight too. Trust the workflows.
+- Some README text lags behind: the top README still describes Cruise Perf as Sideloadly-only, but it now uploads to TestFlight too. Trust the workflows.
 - This repository is public. Never commit personal data, the Access database, Dropbox contents, or anything secret.
 
 ## Background
