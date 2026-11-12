@@ -65,6 +65,12 @@ struct ContentView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .background(Theme.bg.ignoresSafeArea())
+                .onAppear {
+                    // App Store screenshot of the limits editor
+                    if DemoMode.isOn && limOpen {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { proxy.scrollTo("lim", anchor: .top) }
+                    }
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .toolbar {
