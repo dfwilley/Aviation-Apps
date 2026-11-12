@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Homebuilt W&B">
+<meta name="theme-color" content="#1f5f8b">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>Homebuilt W&amp;B</title>
+<style>
+:root{color-scheme:light dark;--bg:#f3f5f7;--panel:#fff;--ink:#18212b;--muted:#5a6773;--rule:#d6dde3;--accent:#1f5f8b;--accent-soft:#e2edf5;--ok:#2e7d4f;--ok-soft:#e1f2e8;--bad:#b3261e;--bad-soft:#fbe4e2;--warn:#a15c00;--warn-soft:#fbefdc;--env2:#8a6bb8}
+@media (prefers-color-scheme:dark){:root{--bg:#11161c;--panel:#18202a;--ink:#e4eaf0;--muted:#9aa8b5;--rule:#2c3946;--accent:#7fb6dc;--accent-soft:#1d3142;--ok:#6fcf97;--ok-soft:#173326;--bad:#ff8a80;--bad-soft:#3a1c1a;--warn:#f0b35a;--warn-soft:#3a2a12;--env2:#b9a0e0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,system-ui,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:44rem;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 16px 48px}
+h1{font-size:1.5rem;margin:0;line-height:1.2}
+h2{font-size:1.2rem;margin:0 0 .5rem}
+.eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:14px;margin-bottom:14px}
+.status{border-radius:8px;padding:10px 14px 10px 18px;margin-bottom:14px;font-weight:600;border-left:4px solid var(--ok);background:var(--ok-soft)}
+.status.warn{border-color:var(--warn);background:var(--warn-soft)}
+.status.bad{border-color:var(--bad);background:var(--bad-soft)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.tile{background:var(--panel);padding:7px 10px;text-align:left;border:0;font:inherit;color:inherit;min-height:54px}
+button.tile{cursor:pointer}
+button.tile.on{background:var(--accent-soft)}
+.tile .k{display:block;font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font:600 1.12rem ui-monospace,Menlo,Consolas,monospace;color:var(--accent)}
+.tile .v.bad{color:var(--bad)}
+.tile .u{font-size:.8rem;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+label,.lab{font-weight:600;font-size:.94rem;display:block;margin-bottom:4px}
+label small,.lab small,.hint{font-weight:400;color:var(--muted);font-size:.85rem}
+.hint{margin:.3rem 0 .6rem;font-size:.9rem}
+input,select{font:1rem ui-monospace,Menlo,Consolas,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:8px 6px;width:100%;min-height:42px}
+input.txt,select{font-family:inherit}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.step{display:flex;gap:4px}
+.step input{text-align:center;min-width:0}
+.btn,.step button{font:600 .95rem inherit;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent);border-radius:6px;min-height:42px;padding:0 14px;cursor:pointer}
+.step button{width:40px;padding:0;flex:none}
+.btn.primary{background:var(--accent);color:var(--panel)}
+.btn.link{background:none;border:0;text-decoration:underline;padding:0;font-weight:400;min-height:32px}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{flex:1;min-height:42px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--panel);font-weight:600}
+table{border-collapse:collapse;width:100%}
+th{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 6px 6px 0;font-weight:600}
+td{padding:5px 6px 5px 0;text-align:right;border-top:1px solid var(--rule);font:.86rem ui-monospace,Menlo,Consolas,monospace}
+th:first-child,td:first-child{text-align:left;font-family:inherit;font-size:.9rem}
+tr.total td{font-weight:700}
+.edit td{border:0;padding:3px 6px 3px 0}
+.edit td:first-child{font-weight:600;width:34%}
+.edit input{text-align:right;font-size:.9rem;padding:8px 4px}
+.edit input.txt{text-align:left}
+.edit th{white-space:normal}
+.scroll{overflow-x:auto}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.legend{font-size:.82rem;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.note{margin:.5rem 0;font-size:.94rem}
+.tag{font-size:.74rem;font-weight:700;letter-spacing:.06em;color:var(--accent);margin-right:.4rem}
+.tag.n{color:var(--warn)}
+dialog{border:1px solid var(--rule);border-radius:10px;background:var(--panel);color:var(--ink);padding:18px;width:min(30rem,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto}
+dialog::backdrop{background:#0008}
+.field{margin-bottom:12px}
+svg text{font:11px -apple-system,system-ui,sans-serif;fill:var(--muted)}
+svg text.b{font-weight:600;fill:var(--ink)}
+footer{font-size:.85rem;color:var(--muted);text-align:center}
+footer a{color:var(--accent)}
+@media print{.noprint,button.btn{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<dialog id="setup" aria-labelledby="setupTitle">
+  <form method="dialog" id="setupForm">
+    <h2 id="setupTitle">Your aircraft</h2>
+    <p class="hint" id="setupHint">Enter your registration and pick your model. The model fills in Van's published limits and arms, and you can change any of them afterward.</p>
+    <div class="field"><label for="sReg">Registration</label>
+      <input class="txt" id="sReg" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="N123AB"></div>
+    <div class="field"><label for="sModel">Model</label><select id="sModel"></select></div>
+    <div class="field"><span class="lab">Landing gear</span>
+      <div class="seg" id="sGear"><button type="button" data-g="tail">Tailwheel</button><button type="button" data-g="nose">Nosewheel</button></div></div>
+    <p class="hint" id="sNote"></p>
+    <p class="hint">This is a planning aid. Your aircraft's own weight and balance record and operating limitations govern.</p>
+    <div class="row"><button type="button" class="btn" id="sCancel">Cancel</button><button type="submit" class="btn primary" id="sOK">Start</button></div>
+  </form>
+</dialog>
+
+<script src="wb-core.js"></script>
+<script>
+(function(){
+'use strict';
+var KEY='homebuilt-wb-v1', P=null, open={ew:false,lim:false}, setupGear='tail';
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function load(){try{var j=localStorage.getItem(KEY);if(j)return WB.normalize(JSON.parse(j))}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
+var f=WB.fmt;
+
+// ---- one-time page build, then live updates without rebuilding inputs ----
+function build(){
+  var third=P.gear==='nose'?'Nosewheel':'Tailwheel', mn=WB.modelName(P.model,P.gear);
+  var h='<header><div><div class="eyebrow">'+esc(P.reg||'No registration')+(mn?' · '+esc(mn):'')+'</div><h1>Weight &amp; Balance</h1></div>'+
+    '<button class="btn noprint" id="bAircraft">Aircraft</button></header>'+
+    '<div id="status" class="status" role="status"></div><div class="tiles" id="tiles"></div>';
+  // load
+  h+='<section class="panel" aria-label="Load"><div class="grid2">';
+  P.stations.forEach(function(s,i){h+=stepField('st'+i,s.name,'lb',s.load,5)});
+  h+=stepField('fuel','Takeoff fuel','gal',P.fuel,1)+stepField('burn','Fuel burned','gal',P.burn,1);
+  if(P.twoCats)h+='<div><span class="lab">Category</span><div class="seg" id="catSeg"><button type="button" data-c="0"></button><button type="button" data-c="1"></button></div></div>';
+  h+='</div></section>';
+  // empty weight editor
+  h+='<section class="panel" id="ewPanel" hidden><div class="row"><h2>Empty weight (scale readings)</h2><button class="btn" data-close="ew">Done</button></div>'+
+    '<p class="hint">Weights are what each scale reads with the airplane level, in the condition your empty weight is defined (for most RVs: full oil, unusable fuel only). Arms are measured from the datum. If you only have a total empty weight and empty CG, enter them on one line and leave the others at 0.</p>'+
+    '<table class="edit"><tr><th></th><th>Weight, lb</th><th>Arm, in</th></tr>'+
+    ewRow('Left main','wL','aL')+ewRow('Right main','wR','aR')+ewRow(third,'w3','a3')+'</table>'+
+    '<p id="ewSum" class="note"></p>'+
+    '<details><summary class="lab" style="cursor:pointer;color:var(--accent)">Add or remove an item instead of reweighing</summary>'+
+    '<table class="edit"><tr><td>Weight change, lb <small>(− to remove)</small></td><td>'+inp('dW',P.dW,'text')+'</td></tr><tr><td>Item arm, in</td><td>'+inp('dA',P.dA)+'</td></tr></table>'+
+    '<p class="hint">The change is added to the empty weight and moment above.</p></details></section>';
+  // limits and arms editor
+  h+='<section class="panel" id="limPanel" hidden><div class="row"><h2>Limits and arms</h2><button class="btn" data-close="lim">Done</button></div>'+
+    '<p class="hint">Change these to match your aircraft\'s operating limitations and weight and balance record. All arms are inches aft of the datum.</p>';
+  h+='<label class="row" style="justify-content:flex-start;font-weight:600"><input type="checkbox" id="twoCats" style="width:22px;min-height:22px"'+(P.twoCats?' checked':'')+'> Use a second category (for example aerobatic)</label>';
+  h+='<div class="scroll"><table class="edit"><tr><th>Envelope</th><th>Max weight, lb</th><th>Fwd CG, in</th><th>Aft CG, in</th></tr>';
+  P.cats.forEach(function(c,i){h+='<tr class="catrow" data-i="'+i+'"><td>'+inp('cn'+i,c.name,'text','txt')+'</td><td>'+inp('cg'+i,c.gross)+'</td><td>'+inp('cf'+i,c.fwd)+'</td><td>'+inp('ca'+i,c.aft)+'</td></tr>'});
+  h+='</table></div><table class="edit"><tr><th>Loading point</th><th>Arm, in</th><th>Limit</th></tr>';
+  P.stations.forEach(function(s,i){h+='<tr><td>'+inp('sn'+i,s.name,'text','txt')+'</td><td>'+inp('sa'+i,s.arm)+'</td><td>'+inp('sm'+i,s.max)+'</td></tr>'});
+  h+='<tr><td>Fuel tanks <small>(limit in gal)</small></td><td>'+inp('fuelArm',P.fuelArm)+'</td><td>'+inp('fuelCap',P.fuelCap)+'</td></tr></table>'+
+    '<p class="hint">Limits for seats and baggage are in pounds; leave a limit blank for none.</p>'+
+    '<div class="grid2"><div><label for="lbGal">Fuel weight <small>lb/gal</small></label>'+inp('lbGal',P.lbGal)+'</div><div></div>'+
+    '<div><label for="le">Wing leading edge <small>in aft of datum</small></label>'+inp('le',P.le)+'</div>'+
+    '<div><label for="chord">Wing chord <small>in</small></label>'+inp('chord',P.chord)+'</div></div>'+
+    '<p class="hint">Leading edge and chord are only used to show CG as a percent of chord. Leave them blank to hide it.</p>'+
+    (P.model!=='custom'?'<button class="btn link" id="bRestore">Restore '+esc(WB.preset(P.model).name)+' default limits and arms</button>':'')+'</section>';
+  h+='<section class="panel"><h2>CG envelope</h2><div id="chart"></div><div class="legend" id="legend"></div></section>'+
+    '<section class="panel"><h2>Loading table</h2><div class="scroll" id="table"></div><p class="noprint" style="margin:.6rem 0 0"><button class="btn" id="bPrint">Print</button></p></section>'+
+    '<section class="panel"><h2>Limits and sources</h2><div id="notes"></div></section>'+
+    '<footer><a href="../privacy.html">Privacy</a> · <a href="../support.html">Support</a><br>Not affiliated with Van\'s Aircraft, Inc.</footer>';
+  $('app').innerHTML=h;
+  $('ewPanel').hidden=!open.ew; $('limPanel').hidden=!open.lim;
+  update();
+}
+function inp(id,v,mode,cls){return '<input id="'+id+'" value="'+esc(v)+'" inputmode="'+(mode==='text'?'text':'decimal')+'" class="'+(cls||'')+'" autocomplete="off" aria-label="'+id+'">'}
+function ewRow(t,w,a){return '<tr><td>'+t+'</td><td>'+inp(w,P[w])+'</td><td>'+inp(a,P[a])+'</td></tr>'}
+function stepField(id,title,unit,v,step){
+  return '<div><label for="'+id+'"><span id="lab_'+id+'">'+esc(title)+'</span> <small>'+unit+'</small></label><div class="step">'+
+    '<button type="button" data-step="'+(-step)+'" data-for="'+id+'" aria-label="'+esc(title)+' minus '+step+'">▼</button>'+
+    '<input id="'+id+'" value="'+esc(v)+'" inputmode="decimal" autocomplete="off">'+
+    '<button type="button" data-step="'+step+'" data-for="'+id+'" aria-label="'+esc(title)+' plus '+step+'">▲</button></div></div>';
+}
+
+// field id -> where it lives in the profile
+function setField(id,v){
+  var m;
+  if((m=/^st(\d+)$/.exec(id)))P.stations[+m[1]].load=v;
+  else if((m=/^sn(\d+)$/.exec(id)))P.stations[+m[1]].name=v;
+  else if((m=/^sa(\d+)$/.exec(id)))P.stations[+m[1]].arm=v;
+  else if((m=/^sm(\d+)$/.exec(id)))P.stations[+m[1]].max=v;
+  else if((m=/^c([ngfa])(\d)$/.exec(id)))P.cats[+m[2]][{n:'name',g:'gross',f:'fwd',a:'aft'}[m[1]]]=v;
+  else if(id in P)P[id]=v;
+}
+
+function pct(cg){var m=WB.mac(P,cg);return m==null?'':' · '+f(m,1)+'%'}
+function tile(k,v,u,bad){return '<div class="tile"><span class="k">'+k+'</span><span class="v'+(bad?' bad':'')+'">'+v+'</span> <span class="u">'+u+'</span></div>'}
+function btile(id,k,v,u,on){return '<button class="tile'+(on?' on':'')+'" id="'+id+'"><span class="k">'+k+' ✎</span><span class="v">'+v+'</span> <span class="u">'+u+'</span></button>'}
+
+function update(){
+  save();
+  var r=WB.compute(P), e=WB.emptyWeight(P), cat=WB.activeCat(P), d='—', st=$('status');
+  if(r){st.className='status '+(r.level==='ok'?'':r.level);st.textContent=r.statusText}
+  else{st.className='status warn';st.textContent='To see results, enter '+WB.missing(P).join(' and ')+'. Tap the tiles marked ✎.'}
+  $('tiles').innerHTML=
+    tile('Takeoff weight',r?f(r.toW):d,'lb',r&&r.overWeight)+
+    tile('Takeoff CG',r?f(r.toCG,2):d,r?'in'+pct(r.toCG):'',r&&!r.inCG(r.toCG))+
+    tile('Landing weight',r?f(r.lW):d,'lb')+
+    tile('Landing CG',r?f(r.lCG,2):d,r?'in'+pct(r.lCG):'',r&&!r.inCG(r.lCG))+
+    tile('Below max weight',r?f(r.margin):d,'lb',r&&r.overWeight)+
+    btile('tEW','Empty weight',e.weight>0?f(e.weight):d,e.weight>0?'lb · '+f(e.moment/e.weight,2)+' in':'',open.ew)+
+    tile('Zero-fuel CG',r?f(r.zfCG,2):d,r?'in'+pct(r.zfCG):'',r&&!r.inCG(r.zfCG))+
+    tile('Max fuel this load',r?f(Math.floor(r.maxFuel*10+1e-9)/10,1):d,'gal')+
+    btile('tLim','Limits and arms',WB.catReady(cat)?f(WB.value(cat.gross)):d,WB.catReady(cat)?'lb · '+WB.plain(WB.value(cat.fwd))+'–'+WB.plain(WB.value(cat.aft))+' in':'not set',open.lim)+
+    tile('Category',esc(P.twoCats?cat.name:P.cats[0].name),'');
+  P.stations.forEach(function(x,i){var l=$('lab_st'+i);if(l)l.textContent=x.name||'Item'});
+  var seg=$('catSeg');
+  if(seg)[].forEach.call(seg.children,function(b,i){b.textContent=P.cats[i].name||('Category '+(i+1));b.setAttribute('aria-pressed',String(P.cat===i))});
+  [].forEach.call(document.querySelectorAll('.catrow'),function(tr){tr.style.opacity=(tr.dataset.i==='1'&&!P.twoCats)?.45:1});
+  $('ewSum').innerHTML=e.weight>0?'Empty weight <b>'+f(e.weight,1)+' lb</b> at <b>'+f(e.moment/e.weight,2)+' in</b>, moment '+f(e.moment,1)+' in-lb':'Enter scale weights and arms.';
+  $('chart').innerHTML=r?chart(r):'<p class="hint">The chart appears when the empty weight and limits are entered.</p>';
+  $('legend').innerHTML='<span class="sw" style="background:var(--accent)"></span>'+esc(P.cats[0].name)+' envelope'+(P.twoCats?' &nbsp; <span class="sw" style="background:var(--env2)"></span>'+esc(P.cats[1].name)+' envelope':'')+'<br>● takeoff &nbsp; ○ landing &nbsp; ■ zero fuel';
+  $('table').innerHTML=r?table(r):'';
+  $('notes').innerHTML=notes();
+}
+
+function chart(r){
+  var c=WB.chartRange(P,r),L=50,R=430,T=14,B=296;
+  function X(v){return L+(v-c.x0)/(c.x1-c.x0)*(R-L)}
+  function Y(w){return B-(w-c.y0)/(c.y1-c.y0)*(B-T)}
+  function cl(v,a,b){return Math.min(Math.max(v,a),b)}
+  var s='<svg viewBox="0 0 440 340" role="img" aria-label="Weight versus center of gravity. Takeoff '+f(r.toW)+' pounds at '+f(r.toCG,2)+' inches. Landing '+f(r.lW)+' pounds at '+f(r.lCG,2)+' inches." style="width:100%;max-width:640px;height:auto">';
+  for(var x=c.x0;x<=c.x1;x+=c.xStep)s+='<line x1="'+X(x)+'" x2="'+X(x)+'" y1="'+T+'" y2="'+B+'" stroke="var(--rule)"/><text x="'+X(x)+'" y="'+(B+14)+'" text-anchor="middle">'+x+'</text>';
+  for(var y=c.y0;y<=c.y1;y+=c.yStep)s+='<line x1="'+L+'" x2="'+R+'" y1="'+Y(y)+'" y2="'+Y(y)+'" stroke="var(--rule)"/><text x="'+(L-6)+'" y="'+(Y(y)+4)+'" text-anchor="end">'+f(y)+'</text>';
+  s+='<text x="'+(L+R)/2+'" y="'+(B+32)+'" text-anchor="middle">CG, inches aft of datum</text><text transform="translate(12,'+(T+B)/2+') rotate(-90)" text-anchor="middle">Weight, lb</text>';
+  P.cats.forEach(function(k,i){
+    if((i===1&&!P.twoCats)||!WB.catReady(k))return;
+    var on=(P.twoCats?P.cat:0)===i,col=i?'var(--env2)':'var(--accent)',g=WB.value(k.gross),x=X(WB.value(k.fwd)),w=X(WB.value(k.aft))-x;
+    s+='<rect x="'+x+'" y="'+Y(g)+'" width="'+w+'" height="'+(Y(c.y0)-Y(g))+'" fill="'+col+'" fill-opacity="'+(on?.13:.05)+'" stroke="'+col+'" stroke-width="'+(on?2:1)+'"'+(on?'':' stroke-dasharray="5 4"')+'/>'+
+      '<text class="b" x="'+(x+4)+'" y="'+(i?Y(g)+13:Y(g)-4)+'">'+esc(k.name)+' '+f(g)+' lb</text>';
+  });
+  function pt(cg,w){return [cl(X(cg),L,R),cl(Y(w),T,B)]}
+  var to=pt(r.toCG,r.toW),ld=pt(r.lCG,r.lW),zf=pt(r.zfCG,r.zfW);
+  s+='<line x1="'+to[0]+'" y1="'+to[1]+'" x2="'+zf[0]+'" y2="'+zf[1]+'" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>'+
+     '<line x1="'+to[0]+'" y1="'+to[1]+'" x2="'+ld[0]+'" y2="'+ld[1]+'" stroke="var(--ink)" stroke-width="2"/>'+
+     '<rect x="'+(zf[0]-5)+'" y="'+(zf[1]-5)+'" width="10" height="10" fill="var(--ink)"/>'+
+     '<circle cx="'+ld[0]+'" cy="'+ld[1]+'" r="6" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>'+
+     '<circle cx="'+to[0]+'" cy="'+to[1]+'" r="6.5" fill="var(--ink)"/>';
+  return s+'</svg>';
+}
+
+function table(r){
+  function row(n,w,a,m,t){return '<tr'+(t?' class="total"':'')+'><td>'+esc(n)+'</td><td>'+w+'</td><td>'+a+'</td><td>'+m+'</td></tr>'}
+  var s='<table style="min-width:420px"><tr><th>Item</th><th>Weight, lb</th><th>Arm, in</th><th>Moment, in-lb</th></tr>'+
+    row('Empty aircraft',f(r.emptyWeight,1),f(r.emptyCG,2),f(r.emptyMoment,1));
+  r.rows.forEach(function(x){s+=row(x.name,f(x.weight,1),f(x.arm,2),f(x.moment,1))});
+  s+=row('Fuel at takeoff ('+f(r.fuelGal,1)+' gal)',f(r.fuelW,1),f(r.fuelArm,2),f(r.fuelW*r.fuelArm,1))+
+    row('Takeoff',f(r.toW,1),f(r.toCG,2),f(r.toM,1),1)+
+    row('Fuel burned ('+f(r.burnGal,1)+' gal)','−'+f(r.burnW,1),f(r.fuelArm,2),'−'+f(r.burnW*r.fuelArm,1))+
+    row('Landing',f(r.lW,1),f(r.lCG,2),f(r.lM,1),1)+
+    row('Zero fuel',f(r.zfW,1),f(r.zfCG,2),f(r.zfM,1));
+  return s+'</table>';
+}
+
+function notes(){
+  var d=WB.preset(P.model);
+  function n(t,s){return '<p class="note"><span class="tag'+(t==='NOTE'?' n':'')+'">'+t+'</span>'+esc(s)+'</p>'}
+  return n(P.model==='custom'?'NOTE':'SOURCE',d.note)+
+    (P.model!=='custom'?n('NOTE','These are starting values for a standard '+d.name+'. The builder sets the gross weight of an amateur-built aircraft, and your airplane may differ. Check every number against your own operating limitations and weight and balance record, and change them under Limits and arms.'):'')+
+    n('NOTE','Wheel arms and scale weights come from your own weighing; none are pre-filled. Fuel is figured at '+WB.plain(WB.value(P.lbGal)>0?WB.value(P.lbGal):6)+' lb/gal. Fuel burn moves the CG, so check the landing and zero-fuel points as well as takeoff.')+
+    n('NOTE','This is a planning aid, not an approved source of data. The pilot in command is responsible for loading the aircraft within its limits. Not affiliated with or endorsed by Van\'s Aircraft, Inc.');
+}
+
+// ---- events ----
+document.addEventListener('input',function(ev){
+  var t=ev.target;
+  if(!t.closest('#app'))return;
+  if(t.id==='twoCats'){P.twoCats=t.checked;if(!P.twoCats)P.cat=0;build();return}
+  setField(t.id,t.value);
+  update();
+});
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('button');if(!t)return;
+  if(t.dataset.step){var i=$(t.dataset.for),hi=t.dataset.for==='fuel'||t.dataset.for==='burn'?(WB.positive(P.fuelCap)||500):1000;i.value=WB.stepped(i.value,+t.dataset.step,0,hi);setField(i.id,i.value);update()}
+  else if(t.dataset.c){P.cat=+t.dataset.c;update()}
+  else if(t.id==='tEW')toggle('ew');
+  else if(t.id==='tLim')toggle('lim');
+  else if(t.dataset.close)toggle(t.dataset.close);
+  else if(t.id==='bAircraft')showSetup(false);
+  else if(t.id==='bPrint')window.print();
+  else if(t.id==='bRestore'){if(confirm('Replace the limits and arms with the '+WB.preset(P.model).name+' defaults? Your scale readings and loads are kept.')){WB.applyPreset(P,P.model);build()}}
+  else if(t.dataset.g){setupGear=t.dataset.g;gearButtons()}
+});
+function toggle(k){open[k]=!open[k];var el=$(k+'Panel');el.hidden=!open[k];update();if(open[k])el.scrollIntoView({behavior:'smooth',block:'start'})}
+
+// ---- setup dialog ----
+function gearButtons(){[].forEach.call($('sGear').children,function(b){b.setAttribute('aria-pressed',String(b.dataset.g===setupGear))});$('sNote').textContent=WB.preset($('sModel').value).note}
+function showSetup(first){
+  var sel=$('sModel');
+  sel.innerHTML=WB.PRESETS.map(function(d){return '<option value="'+d.id+'">'+d.name+(d.aName?' / '+d.aName:'')+'</option>'}).join('')+'<option value="custom">Other / custom values</option>';
+  sel.value=first?'rv14':P.model; $('sReg').value=first?'':P.reg; setupGear=first?WB.preset(sel.value).gear:P.gear;
+  $('sCancel').hidden=first; $('sOK').textContent=first?'Start':'Save';
+  $('setupHint').textContent=first?'Enter your registration and pick your model. The model fills in Van\'s published limits and arms, and you can change any of them afterward.':'Changing the model replaces the limits and arms with that model\'s defaults. Your scale readings are kept.';
+  gearButtons(); $('setup').showModal();
+}
+$('sModel').addEventListener('change',function(){if(!P||this.value!==P.model)setupGear=WB.preset(this.value).gear;gearButtons()});
+$('sCancel').addEventListener('click',function(){$('setup').close()});
+$('setup').addEventListener('cancel',function(ev){if(!P)ev.preventDefault()});
+$('setupForm').addEventListener('submit',function(){
+  var reg=WB.cleanReg($('sReg').value),m=$('sModel').value;
+  if(!P)P=WB.newProfile(reg,m,setupGear);
+  else{P.reg=reg;P.gear=setupGear;if(m!==P.model)WB.applyPreset(P,m)}
+  build();
+});
+
+P=load();
+if(P)build();else showSetup(true);
+})();
+</script>
+</body>
+</html>
