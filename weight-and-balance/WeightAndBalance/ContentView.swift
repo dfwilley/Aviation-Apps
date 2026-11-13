@@ -65,6 +65,10 @@ struct ContentView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .background(Theme.bg.ignoresSafeArea())
+                // Solid strip behind the clock and battery, so scrolled content doesn't show through them
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    Color.clear.frame(height: 0).background(Theme.bg)
+                }
                 .onAppear {
                     // App Store screenshot of the limits editor
                     if DemoMode.isOn && limOpen {
