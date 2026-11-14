@@ -40,6 +40,8 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 
 For anything larger than a small fix, work on a branch and merge to `main` only when it is ready, because the merge is what ships it.
 
+**Standing instruction from the owner (November 14, 2026): once the tests pass on the branch, merge to `main` without asking.** Then confirm the `main` builds went through. Still ask first if the tests fail, if a test expectation or a flight number had to change, or if the change publishes something new.
+
 ## Tests and checks
 
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
