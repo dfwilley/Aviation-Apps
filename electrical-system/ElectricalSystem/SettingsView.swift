@@ -60,7 +60,7 @@ struct SettingsView: View {
                     row("Total EBBS load", PowerModel.ampsText(ebbsLoadA))
                         .font(.headline)
                         .foregroundColor(ebbsLoadA > Ratings.ebbsMaxContinuousA ? .orange : .primary)
-                    Button("Use the planned values (\(PowerModel.ampsText(Ratings.ebbsPlannedLoadA)) total)") {
+                    Button("Use the wiring map values (\(PowerModel.ampsText(Ratings.ebbsPlannedLoadA)) total)") {
                         focusedField = nil
                         ebbsFields = Ratings.ebbsPlannedLoads.map { Self.fieldText($0.amps) }
                         saveEbbsFields()
@@ -68,7 +68,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Backup battery (EBBS)")
                 } footer: {
-                    Text("Type the amps each item draws. The total is what the EBBS time estimate uses. The starting values are from the VP-X load plan. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and the total turns orange above that. The A210 figure is its planned draw, which is higher than it uses when only receiving. Transmitting on either radio draws more than receiving.")
+                    Text("Type the amps each item draws. The total is what the EBBS time estimate uses. The starting values are the expected loads from the airplane's wiring map. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and the total turns orange above that. Transmitting on either radio draws more than these figures.")
                 }
 
                 Section {
@@ -98,7 +98,9 @@ struct SettingsView: View {
     // MARK: - EBBS item amps
 
     private static func fieldText(_ amps: Double) -> String {
-        abs(amps - amps.rounded()) < 0.005 ? String(Int(amps.rounded())) : String(format: "%.1f", amps)
+        if abs(amps - amps.rounded()) < 0.005 { return String(Int(amps.rounded())) }
+        if abs(amps * 10 - (amps * 10).rounded()) < 0.005 { return String(format: "%.1f", amps) }
+        return String(format: "%.2f", amps)
     }
 
     /// Fills the text boxes from what was saved, or from the planned values the first time.

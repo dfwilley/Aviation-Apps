@@ -172,8 +172,8 @@ final class PowerModelTests: XCTestCase {
         var i = ElectricalInputs()
         var r = PowerModel.evaluate(i, config())
         XCTAssertEqual(r.ebbsState, .notArmed)
-        // 6.4 Ah usable / 12.5 A (with the A210 on the EBBS) = 30.7 min.
-        XCTAssertEqual(r.ebbsLifeMin, 30.7, accuracy: 0.1)
+        // 6.4 Ah usable / 6.95 A (the wiring map loads, A210 included) = 55.3 min.
+        XCTAssertEqual(r.ebbsLifeMin, 55.3, accuracy: 0.1)
 
         i.emergencyPower = true
         r = PowerModel.evaluate(i, config())
@@ -208,10 +208,10 @@ final class PowerModelTests: XCTestCase {
         r = PowerModel.evaluate(i, c)
         XCTAssertEqual(r.mainBusLostAtMin, 0)
         XCTAssertEqual(r.battery1State, .empty)
-        // EBBS with 3.2 of its 6.4 Ah used: 3.2 / 12.5 A = 15.4 min.
+        // EBBS with 3.2 of its 6.4 Ah used: 3.2 / 6.95 A = 27.6 min.
         c.ebbsUsedAh = 3.2
         r = PowerModel.evaluate(i, c)
-        XCTAssertEqual(r.ebbsLifeMin, 15.4, accuracy: 0.1)
+        XCTAssertEqual(r.ebbsLifeMin, 27.6, accuracy: 0.1)
     }
 
     func testEBBSItemAmpsEntry() {
@@ -221,16 +221,24 @@ final class PowerModelTests: XCTestCase {
         XCTAssertEqual(EBBSLoad.parseAmps("abc"), 0)
         XCTAssertEqual(EBBSLoad.parseAmps("-4"), 0)
         XCTAssertEqual(EBBSLoad.parseAmps("99"), 20)
-        // Nothing saved yet: the planned values, which add up to 12.5 A.
-        XCTAssertEqual(EBBSLoad.itemAmps(from: "").reduce(0, +), 12.5, accuracy: 0.001)
+        // Nothing saved yet: the planned values, 1.65 + 2.5 + 1.44 + 0.57 + 0.29 + 0.5 = 6.95 A.
+        XCTAssertEqual(EBBSLoad.itemAmps(from: "").reduce(0, +), 6.95, accuracy: 0.001)
+        XCTAssertEqual(EBBSLoad.itemAmps(from: ""), [1.65, 2.5, 1.44, 0.57, 0.29, 0.5])
         // Saved values are used in order.
-        // Five values saved before the A210 was added: the A210 takes its planned 4 A.
-        XCTAssertEqual(EBBSLoad.itemAmps(from: "3.0,2.0,1.0,0.5,0.5"), [3.0, 2.0, 1.0, 0.5, 0.5, 4.0])
+        // Five values saved before the A210 was added: the A210 takes its expected 0.5 A.
+        XCTAssertEqual(EBBSLoad.itemAmps(from: "3.0,2.0,1.0,0.5,0.5"), [3.0, 2.0, 1.0, 0.5, 0.5, 0.5])
         XCTAssertEqual(EBBSLoad.itemAmps(from: "3.0,2.0,1.0,0.5,0.5,0.6"), [3.0, 2.0, 1.0, 0.5, 0.5, 0.6])
         // Total 7 A on 6.4 Ah usable: 54.9 min.
         var c = ElectricalConfig()
         c.ebbsLoadA = 7
         XCTAssertEqual(PowerModel.evaluate(ElectricalInputs(), c).ebbsLifeMin, 54.9, accuracy: 0.1)
+    }
+
+    func testAmpsText() {
+        XCTAssertEqual(PowerModel.ampsText(35), "35 A")
+        XCTAssertEqual(PowerModel.ampsText(2.5), "2.5 A")
+        XCTAssertEqual(PowerModel.ampsText(1.44), "1.44 A")
+        XCTAssertEqual(PowerModel.ampsText(6.95), "6.95 A")
     }
 
     func testDurationText() {

@@ -39,16 +39,17 @@ enum Ratings {
     static let fuelPumpBreakerA = 10.0         // two pumps, only one runs at a time
     static let essentialBreakerCeilingA = 2 * ecuBreakerA + ignitionBreakerA + fuelPumpBreakerA
 
-    // Planned draws for the avionics on the EBBS, from the VP-X load plan.
+    // Expected draws for the equipment on the EBBS, from the airplane's harness wiring map
+    // (EBBS output pins 4 and 12 to 15). Keep the order: saved values are stored by position.
     static let ebbsPlannedLoads: [(name: String, amps: Double)] = [
-        ("Left HXr and AHRS", 3.6),
+        ("Left HXr and AHRS", 1.65),
         ("PMA8000BT audio panel", 2.5),
-        ("GTX-330 transponder", 1.5),
-        ("SL-30 nav", 0.6),
-        ("SL-30 com (receiving)", 0.3),
-        ("Icom A210 com", 4.0),
+        ("GTX-330 transponder", 1.44),
+        ("SL-30 nav", 0.57),
+        ("SL-30 com", 0.29),
+        ("Icom A210 com", 0.5),
     ]
-    static let ebbsPlannedLoadA = 12.5
+    static let ebbsPlannedLoadA = 6.95
 }
 
 /// Helpers for the amps typed in for each item on the EBBS.
@@ -399,7 +400,8 @@ enum PowerModel {
     }
 
     static func ampsText(_ amps: Double) -> String {
-        if abs(amps - amps.rounded()) < 0.05 { return "\(Int(amps.rounded())) A" }
-        return String(format: "%.1f A", amps)
+        if abs(amps - amps.rounded()) < 0.005 { return "\(Int(amps.rounded())) A" }
+        if abs(amps * 10 - (amps * 10).rounded()) < 0.005 { return String(format: "%.1f A", amps) }
+        return String(format: "%.2f A", amps)
     }
 }
