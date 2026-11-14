@@ -20,6 +20,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 | `hangar-voice-log/` | Native iPhone app (SwiftUI). Voice notes become draft maintenance logbook entries. Shows on the phone as "Hangar Log". Bundle ID `com.dfwilley.hangarvoicelog` | XcodeGen from `project.yml` |
 | `weight-and-balance/` | "Homebuilt W&B": native iPhone app (SwiftUI) for any registration, with RV model defaults, plus a matching web app in `web/`. Bundle ID `com.dfwilley.weightandbalance` | XcodeGen from `project.yml` |
 | `cruise-performance/` | Native iPhone app (SwiftUI), "Cruise Perf". Bundle ID `com.n721ne.cruise` | Checked-in Xcode project in `ios/` (no XcodeGen) |
+| `electrical-system/` | Native iPhone app (SwiftUI), "N721NE Elec". Live diagram of the electrical system with power paths and battery life. Bundle ID `com.dfwilley.electricalsystem` | XcodeGen from `project.yml` |
 | `fuel-planner/` | Web app, plain HTML and JavaScript, no build step | GitHub Pages |
 | `hangar-board/` | Arduino firmware for an ESP32 e-paper status board, plus a web installer page | Arduino IDE; compiled `.bin` files are checked in under `firmware/` |
 
@@ -30,7 +31,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 **A push to `main` is a release.** There is no staging step.
 
 - Each app has workflows in `.github/workflows/` that run only when files in that app's folder change.
-- The three iPhone apps each have an `...-testflight.yml` workflow. Any push to `main` that touches the app's folder builds, signs and uploads a new build to TestFlight, and it installs on the testers' phones automatically.
+- The four iPhone apps each have an `...-testflight.yml` workflow. Any push to `main` that touches the app's folder builds, signs and uploads a new build to TestFlight, and it installs on the testers' phones automatically.
 - The TestFlight workflows for Hangar Voice Log and Weight & Balance **do not run the tests**. Their tests run in the separate `...-build.yml` workflows, so a change with failing tests can still be uploaded. Check the test run before calling work finished. Cruise Perf is the exception: its TestFlight workflow runs the math check first.
 - Build numbers are the workflow run number plus 1000; don't set them by hand.
 - Signing uses four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`. Never print or log them. The helper scripts are `hangar-voice-log/tools/asc_precheck.py` and `asc_signing.py`.
@@ -44,11 +45,12 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
 - Weight & Balance: `WeightAndBalanceTests/` checks results against the web app's numbers. `web/wb-core.js` and `WBModel.swift` hold the same math and model defaults; change both together and run `node web/test.js`. Model defaults come from Van's weight and balance quick-reference sheets (sources listed in `weight-and-balance/README.md`).
 - Cruise Perf: `cruise-performance/ios/ModelCheck/` compares the Swift math with `expected.json`, which was produced by the web app's own code.
+- Electrical System: `ElectricalSystemTests/` checks power paths and battery times against hand-worked numbers. Its build workflow runs the tests on every branch, and its TestFlight workflow runs them before uploading.
 - These need a Mac, so they run in GitHub Actions, not locally on Linux or Windows. To test before merging, push to a branch and run the build workflow by hand on that branch (it has a "Run workflow" button).
 
 ## Things that are easy to get wrong
 
-- **The numbers matter.** Weight & Balance and Cruise Perf are flight-planning aids. Do not change limits, arms, weights, performance math or the test expectations unless the owner asks for that specific change. If a test disagrees with the code, stop and ask; don't edit the expected values to make it pass.
+- **The numbers matter.** Weight & Balance and Cruise Perf are flight-planning aids, and Electrical System is an in-flight reference. Do not change limits, arms, weights, performance math or the test expectations unless the owner asks for that specific change. If a test disagrees with the code, stop and ask; don't edit the expected values to make it pass.
 - **Hangar Log's data comes from outside this repository.** A daily Claude scheduled task (set up in the Claude app, not here) runs `hangar-voice-log/tools/make_hangar_data.py` against the owner's Access maintenance database and saves a `Hangar Log Data <date>.json` file in his Dropbox. The app reads the newest file from a folder the owner picks. Finished entries are written to `Claude Logbook Import.txt` in that folder for an Access import routine. If you change the JSON layout or the import file layout, the app, the Python tool and the Access side must all change together. Tell the owner, because the scheduled task and Access are his to update.
 - The Access database is read-only to all of this code. Keep it that way.
 - Hangar Log has a demo mode (`-demo` launch argument, fictional aircraft N512PT) used only for screenshots. Don't let demo data show in normal use.

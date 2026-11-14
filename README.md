@@ -7,6 +7,7 @@ N721NE and flying-related apps, kept together in one place. Each app lives in it
 | Hangar Voice Log | `hangar-voice-log/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page with Sideloadly (see `hangar-voice-log/INSTALL.md`) |
 | Homebuilt W&B (weight and balance) | `weight-and-balance/` | Native iPhone and web | TestFlight, the `.ipa` on the Releases page, or the web app: https://dfwilley.github.io/Aviation-Apps/weight-and-balance/web/ |
 | Cruise Perf | `cruise-performance/` | Native iPhone | Actions → *Cruise Perf - build iPhone app* → Run workflow |
+| Electrical System | `electrical-system/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page |
 | Fuel Planner | `fuel-planner/` | Web app | https://dfwilley.github.io/Aviation-Apps/fuel-planner/ |
 | Hangar Board | `hangar-board/` | ESP32 e-paper board | Installer page: https://dfwilley.github.io/Aviation-Apps/hangar-board/ |
 
