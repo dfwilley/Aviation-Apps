@@ -7,8 +7,9 @@ Shows on the phone as "N721NE Elec". Bundle ID `com.dfwilley.electricalsystem`.
 ## What it does
 
 - Draws the two alternators, three batteries, the main bus and the essential bus (the engine).
-- Buttons fail the main alternator, backup alternator, Battery 1 or Battery 2. Any combination works.
-- An Emergency Power switch and an engine RPM choice (the backup alternator gives less near idle).
+- Touch an alternator or battery box on the diagram to fail it or bring it back. Any combination works.
+- Touch the EMER box to switch Emergency Power on or off.
+- An engine RPM choice (the backup alternator gives less near idle).
 - A slider for main bus load, 0 to 40 A. Set it to the total on the VP-X page.
 - For each state: which source feeds each bus, how long each bus lasts, each battery's rated and usable capacity, and plain-language notes.
 

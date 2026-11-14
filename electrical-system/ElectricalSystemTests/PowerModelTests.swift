@@ -69,7 +69,9 @@ final class PowerModelTests: XCTestCase {
         XCTAssertEqual(r.battery2State, .discharging(amps: 5))
         assertMinutes(r.battery2EmptyAtMin, 119.0)
         // Then Battery 1 gives the 5 A: 12.48 / 5 = 149.8 min more.
-        assertMinutes(r.engineLostAtMin, 268.8)
+        // After that the alternator is still connected but 5 A short, so the bus is over its limit, not dead.
+        assertMinutes(r.essentialOverloadAtMin, 268.8)
+        XCTAssertNil(r.engineLostAtMin)
     }
 
     func testBothAlternatorsFailed() {
@@ -129,6 +131,28 @@ final class PowerModelTests: XCTestCase {
         let r = PowerModel.evaluate(i, config())
         XCTAssertTrue(r.now.mainBusPowered)
         XCTAssertNil(r.mainBusLostAtMin)
+        XCTAssertNil(r.engineLostAtMin)
+    }
+
+    func testBackupAlternatorAloneStillPowersTheEngine() {
+        var i = ElectricalInputs()
+        i.mainAltOK = false
+        i.battery1OK = false
+        i.battery2OK = false
+        // Set load (35 A) is above the backup alternator's 30 A, and there is no battery to help.
+        // The bus is still powered by the alternator. It is over its limit, not dead.
+        var r = PowerModel.evaluate(i, config(essential: 35))
+        XCTAssertTrue(r.now.essentialPowered)
+        XCTAssertNil(r.engineLostAtMin)
+        XCTAssertEqual(r.now.essentialFromBackupAlt, 30)
+        XCTAssertEqual(r.now.essentialOverload, 5)
+        XCTAssertEqual(r.essentialOverloadAtMin, 0)
+        XCTAssertEqual(r.mainBusLostAtMin, 0)
+        // With a load the alternator can carry, there is no overload at all.
+        r = PowerModel.evaluate(i, config(essential: 12))
+        XCTAssertTrue(r.now.essentialPowered)
+        XCTAssertEqual(r.now.essentialOverload, 0)
+        XCTAssertNil(r.essentialOverloadAtMin)
         XCTAssertNil(r.engineLostAtMin)
     }
 

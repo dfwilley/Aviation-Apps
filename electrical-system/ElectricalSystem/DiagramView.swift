@@ -2,9 +2,17 @@ import SwiftUI
 
 /// The live one-line diagram of the electrical system.
 /// Green = alternator power, amber = battery power, gray = no current, red = failed or dead.
+/// Touch an alternator, a battery or the EMER box to fail it or turn it back on.
 struct DiagramView: View {
-    let inputs: ElectricalInputs
+    @Binding var inputs: ElectricalInputs
     let result: ElectricalResult
+
+    // Where the touchable boxes sit on the drawing grid.
+    private static let mainAltBox = CGRect(x: 8, y: 20, width: 80, height: 36)
+    private static let battery1Box = CGRect(x: 8, y: 70, width: 80, height: 36)
+    private static let backupAltBox = CGRect(x: 8, y: 170, width: 80, height: 36)
+    private static let battery2Box = CGRect(x: 8, y: 220, width: 80, height: 36)
+    private static let emergencyBox = CGRect(x: 150, y: 131, width: 44, height: 22)
 
     /// The drawing is laid out on a 340 x 264 grid and scaled to fit.
     static let designSize = CGSize(width: 340, height: 264)
@@ -18,6 +26,34 @@ struct DiagramView: View {
         }
         .aspectRatio(Self.designSize.width / Self.designSize.height, contentMode: .fit)
         .accessibilityLabel("Electrical system diagram")
+        .overlay(
+            GeometryReader { geo in
+                let s = geo.size.width / Self.designSize.width
+                ZStack {
+                    touchArea(Self.mainAltBox, s, "Main alternator", on: inputs.mainAltOK) { inputs.mainAltOK.toggle() }
+                    touchArea(Self.battery1Box, s, "Battery 1", on: inputs.battery1OK) { inputs.battery1OK.toggle() }
+                    touchArea(Self.backupAltBox, s, "Backup alternator", on: inputs.backupAltOK) { inputs.backupAltOK.toggle() }
+                    touchArea(Self.battery2Box, s, "Battery 2", on: inputs.battery2OK) { inputs.battery2OK.toggle() }
+                    touchArea(Self.emergencyBox, s, "Emergency power", on: inputs.emergencyPower, pad: 9) {
+                        inputs.emergencyPower.toggle()
+                    }
+                }
+            }
+        )
+    }
+
+    /// An invisible button laid over one box of the drawing. `pad` makes a small box easier to hit.
+    private func touchArea(_ r: CGRect, _ s: CGFloat, _ name: String, on: Bool, pad: CGFloat = 3,
+                           action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Color.clear
+        }
+        .buttonStyle(.plain)
+        .frame(width: (r.width + 2 * pad) * s, height: (r.height + 2 * pad) * s)
+        .contentShape(Rectangle())
+        .position(x: r.midX * s, y: r.midY * s)
+        .accessibilityLabel(name)
+        .accessibilityValue(on ? "on" : "off")
     }
 
     // MARK: - Drawing
@@ -74,7 +110,7 @@ struct DiagramView: View {
         line(ctx, s, [(100, 150), (140, 150), (140, 142)], e4, dashed: !inputs.emergencyPower)
         line(ctx, s, [(140, 142), (150, 142)], eOut, dashed: !inputs.emergencyPower)
         line(ctx, s, [(194, 142), (200, 142)], eOut, dashed: !inputs.emergencyPower)
-        box(ctx, s, CGRect(x: 150, y: 131, width: 44, height: 22),
+        box(ctx, s, Self.emergencyBox,
             title: "EMER", sub: inputs.emergencyPower ? "ON" : "OFF",
             border: inputs.emergencyPower ? Theme.emergency : Theme.off,
             subColor: inputs.emergencyPower ? Theme.emergency : Theme.dim, titleSize: 7, subSize: 8)
@@ -107,14 +143,14 @@ struct DiagramView: View {
         label(ctx, s, "L HXr · SL-30 · audio · xpdr", 274, 250, size: 7, color: Theme.dim)
 
         // Sources
-        sourceBox(ctx, s, CGRect(x: 8, y: 20, width: 80, height: 36), title: "MAIN ALT",
+        sourceBox(ctx, s, Self.mainAltBox, title: "MAIN ALT",
                   sub: "60 A", ok: inputs.mainAltOK, active: inputs.mainAltOK ? .alt : .off)
-        sourceBox(ctx, s, CGRect(x: 8, y: 70, width: 80, height: 36), title: "BAT 1",
+        sourceBox(ctx, s, Self.battery1Box, title: "BAT 1",
                   sub: batteryText(result.battery1State), ok: inputs.battery1OK, active: bat1Wire)
-        sourceBox(ctx, s, CGRect(x: 8, y: 170, width: 80, height: 36), title: "BKUP ALT",
+        sourceBox(ctx, s, Self.backupAltBox, title: "BKUP ALT",
                   sub: inputs.lowRPM ? "15 A low RPM" : "30 A", ok: inputs.backupAltOK,
                   active: inputs.backupAltOK ? .alt : .off)
-        sourceBox(ctx, s, CGRect(x: 8, y: 220, width: 80, height: 36), title: "BAT 2",
+        sourceBox(ctx, s, Self.battery2Box, title: "BAT 2",
                   sub: batteryText(result.battery2State), ok: inputs.battery2OK, active: bat2Wire)
     }
 

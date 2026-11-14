@@ -25,11 +25,14 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    DiagramView(inputs: inputs, result: result)
+                    DiagramView(inputs: $inputs, result: result)
                         .padding(8)
                         .background(Theme.background)
+                    Text("Touch an alternator, a battery or the EMER box to turn it off or on.")
+                        .font(.caption)
+                        .foregroundColor(Theme.dim)
                     legend
-                    failureControls
+                    rpmControl
                     loadControl
                     busCard(title: "MAIN BUS", detail: "Avionics, lights, flaps, trim, autopilot",
                             source: mainBusSource(result), time: mainBusTime(result),
@@ -38,7 +41,8 @@ struct ContentView: View {
                             + PowerModel.ampsText(config.essentialLoadA)
                             + (config.essentialLoadIsMeasured ? " measured" : " breaker total"),
                             source: essentialSource(result), time: essentialTime(result),
-                            timeColor: timeColor(result.engineLostAtMin))
+                            timeColor: result.essentialOverloadAtMin != nil ? Theme.battery
+                                : timeColor(result.engineLostAtMin))
                     batteriesCard(result, config)
                     notesCard(result)
                     Text("Reference aid only. The POH, the checklist and what the airplane is showing you come first. "
@@ -92,64 +96,12 @@ struct ContentView: View {
         }
     }
 
-    private var failureControls: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                failButton("Main alternator", ok: $inputs.mainAltOK)
-                failButton("Backup alternator", ok: $inputs.backupAltOK)
-            }
-            HStack(spacing: 10) {
-                failButton("Battery 1 (main)", ok: $inputs.battery1OK)
-                failButton("Battery 2 (alternate)", ok: $inputs.battery2OK)
-            }
-            Button {
-                inputs.emergencyPower.toggle()
-            } label: {
-                HStack {
-                    Text("EMERGENCY POWER")
-                        .font(.subheadline.weight(.bold))
-                    Spacer()
-                    Text(inputs.emergencyPower ? "ON" : "OFF")
-                        .font(.headline.weight(.heavy))
-                }
-                .padding(.horizontal, 14)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .foregroundColor(inputs.emergencyPower ? .black : .white)
-                .background(inputs.emergencyPower ? Theme.emergency : Theme.card)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.emergency, lineWidth: 1.5))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(.plain)
-
-            Picker("Engine RPM", selection: $inputs.lowRPM) {
-                Text("1,800 RPM and above").tag(false)
-                Text("Near 1,000 RPM").tag(true)
-            }
-            .pickerStyle(.segmented)
+    private var rpmControl: some View {
+        Picker("Engine RPM", selection: $inputs.lowRPM) {
+            Text("1,800 RPM and above").tag(false)
+            Text("Near 1,000 RPM").tag(true)
         }
-    }
-
-    private func failButton(_ name: String, ok: Binding<Bool>) -> some View {
-        Button {
-            ok.wrappedValue.toggle()
-        } label: {
-            VStack(spacing: 3) {
-                Text(name)
-                    .font(.footnote.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text(ok.wrappedValue ? "OK" : "FAILED")
-                    .font(.subheadline.weight(.heavy))
-            }
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .foregroundColor(ok.wrappedValue ? .white : .black)
-            .background(ok.wrappedValue ? Theme.card : Theme.fail)
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .stroke(ok.wrappedValue ? Theme.cardEdge : Theme.fail, lineWidth: 1.5))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(name), \(ok.wrappedValue ? "OK" : "failed")")
+        .pickerStyle(.segmented)
     }
 
     private var loadControl: some View {
@@ -211,6 +163,7 @@ struct ContentView: View {
         if f.essentialFromBattery2 > 0.01 { parts.append("Battery 2 (\(PowerModel.ampsText(f.essentialFromBattery2)))") }
         if f.essentialFromBattery1 > 0.01 { parts.append("Battery 1 (\(PowerModel.ampsText(f.essentialFromBattery1)))") }
         var text = "Fed by " + parts.joined(separator: " and ")
+        if f.essentialOverload > 0.01 { text += " alone, with no battery behind it" }
         if inputs.mainAltOK, inputs.backupAltOK, f.essentialFromMainAlt > 0.01 {
             text += ". Backup alternator is ready behind it."
         }
@@ -218,7 +171,11 @@ struct ContentView: View {
     }
 
     private func essentialTime(_ r: ElectricalResult) -> String {
-        guard let t = r.engineLostAtMin else { return "Sustained" }
+        guard let t = r.engineLostAtMin else {
+            if r.now.essentialOverload > 0.01 { return "Powered, over the limit" }
+            if let at = r.essentialOverloadAtMin { return PowerModel.durationText(at) + " of battery help" }
+            return "Sustained"
+        }
         return t <= 0 ? "No power" : PowerModel.durationText(t) + " left"
     }
 

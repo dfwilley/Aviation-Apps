@@ -87,7 +87,11 @@ struct Flows: Equatable {
     var essentialFromBackupAlt = 0.0
     var essentialFromBattery1 = 0.0
     var essentialFromBattery2 = 0.0
+    /// Amps nothing can supply while no source at all is connected. The engine has no power.
     var essentialShortfall = 0.0
+    /// Amps the set load is above what a lone alternator can give, with no battery to help.
+    /// The bus is still powered, but the alternator is at or past its limit.
+    var essentialOverload = 0.0
 
     var battery1Out: Double { mainFromBattery1 + essentialFromBattery1 }
     var battery2Out: Double { essentialFromBattery2 }
@@ -125,6 +129,9 @@ struct ElectricalResult: Equatable {
     var mainBusLostAtMin: Double?
     /// Minutes until the essential bus (the engine) loses power. nil means sustained.
     var engineLostAtMin: Double?
+    /// Minutes until the essential bus is left on an alternator that cannot meet the set load,
+    /// with no battery left to help. nil means that never happens. 0 means it is the case now.
+    var essentialOverloadAtMin: Double?
     /// Engine time if every main bus load were switched off. nil means sustained.
     var engineLostIfMainShedMin: Double?
     var battery1EmptyAtMin: Double?
@@ -176,7 +183,12 @@ enum PowerModel {
             f.essentialFromBattery1 = need
             need = 0
         }
-        f.essentialShortfall = need
+        if need > 0, f.essentialFromMainAlt + f.essentialFromBackupAlt > 0.01 {
+            // An alternator is still connected. It powers the bus but cannot meet the set load.
+            f.essentialOverload = need
+        } else {
+            f.essentialShortfall = need
+        }
         return f
     }
 
@@ -235,6 +247,9 @@ enum PowerModel {
                 r.engineLostAtMin = t
                 break
             }
+            if f.essentialOverload > 0.01, r.essentialOverloadAtMin == nil {
+                r.essentialOverloadAtMin = t
+            }
             if f.battery1Out < 0.01, f.battery2Out < 0.01 {
                 break   // nothing is draining, so this state holds
             }
@@ -260,6 +275,20 @@ enum PowerModel {
         if !f.essentialPowered {
             a.append(Advisory(level: .warning, text:
                 "No source can carry the essential bus. The engine has no electrical power in this state."))
+        }
+        if let at = r.essentialOverloadAtMin, at > 0 {
+            a.append(Advisory(level: .caution, text:
+                "When the batteries are empty, in about \(Self.durationText(at)), the essential bus will be on the alternator alone "
+                + "and the set load is above what it can give."))
+        }
+        if f.essentialOverload > 0.01 {
+            let limit = f.essentialFromMainAlt + f.essentialFromBackupAlt
+            a.append(Advisory(level: .warning, text:
+                "The essential bus is on an alternator alone, with no battery behind it. "
+                + "The set load of \(Self.ampsText(config.essentialLoadA)) is above the \(Self.ampsText(limit)) it can give"
+                + (inputs.lowRPM && inputs.backupAltOK && !inputs.mainAltOK ? " at low RPM" : "")
+                + ". If the real load is that high, expect low voltage and the engine may not keep running."
+                + (inputs.lowRPM && inputs.backupAltOK ? " Keep RPM at 1,800 or above." : "")))
         }
         if !f.mainBusPowered {
             a.append(Advisory(level: .warning, text:
