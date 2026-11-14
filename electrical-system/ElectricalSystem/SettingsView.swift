@@ -4,7 +4,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("usablePercent") private var usablePercent = 80.0
-    @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialBreakerCeilingA
+    @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialDefaultLoadA
     @AppStorage("essentialLoadIsMeasured") private var essentialLoadIsMeasured = false
     /// Amps typed in for each item on the EBBS, in the same order as the planned list.
     @AppStorage("ebbsItemAmps") private var ebbsItemAmpsRaw = ""
@@ -32,6 +32,10 @@ struct SettingsView: View {
                         row("Essential bus load", PowerModel.ampsText(essentialLoadA))
                     }
                     Toggle("This is a measured value", isOn: $essentialLoadIsMeasured)
+                    Button("Use \(PowerModel.ampsText(Ratings.essentialDefaultLoadA)) (the starting value)") {
+                        essentialLoadA = Ratings.essentialDefaultLoadA
+                        essentialLoadIsMeasured = false
+                    }
                     Button("Use the breaker total (\(PowerModel.ampsText(Ratings.essentialBreakerCeilingA)))") {
                         essentialLoadA = Ratings.essentialBreakerCeilingA
                         essentialLoadIsMeasured = false
@@ -39,7 +43,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Essential bus (engine)")
                 } footer: {
-                    Text("The breaker total is ECU 1 (5 A) + ECU 2 (5 A) + ignition (15 A) + one fuel pump (10 A), from the System32 manual. Breakers are upper limits, so the real draw is lower and real battery times are longer. Measure the essential bus current with the engine running and enter it here. The Bus Manager's essential bus output is rated for \(Int(Ratings.essentialBusMaxA)) A.")
+                    Text("The app starts at \(PowerModel.ampsText(Ratings.essentialDefaultLoadA)), the owner's figure. The breaker total is ECU 1 (5 A) + ECU 2 (5 A) + ignition (15 A) + one fuel pump (10 A), from the System32 manual. Breakers are upper limits, so the real draw is lower and real battery times are longer. Measure the essential bus current with the engine running and enter it here. The Bus Manager's essential bus output is rated for \(Int(Ratings.essentialBusMaxA)) A.")
                 }
 
                 Section {

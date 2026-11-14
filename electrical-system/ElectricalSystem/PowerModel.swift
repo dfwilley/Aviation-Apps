@@ -38,6 +38,8 @@ enum Ratings {
     static let ignitionBreakerA = 15.0         // coil packs and injector power
     static let fuelPumpBreakerA = 10.0         // two pumps, only one runs at a time
     static let essentialBreakerCeilingA = 2 * ecuBreakerA + ignitionBreakerA + fuelPumpBreakerA
+    /// The owner's figure for the essential bus load (set November 14, 2026).
+    static let essentialDefaultLoadA = 13.0
 
     // Expected draws for the equipment on the EBBS, from the airplane's harness wiring map
     // (EBBS output pins 4 and 12 to 15). Keep the order: saved values are stored by position.
@@ -76,9 +78,14 @@ enum EBBSLoad {
 /// Values the owner can adjust in Settings.
 struct ElectricalConfig: Equatable {
     var usableFraction = 0.80
-    var essentialLoadA = Ratings.essentialBreakerCeilingA
+    var essentialLoadA = Ratings.essentialDefaultLoadA
     var essentialLoadIsMeasured = false
     var ebbsLoadA = Ratings.ebbsPlannedLoadA
+
+    /// True while the essential bus load is still the breaker total, which overstates the real draw.
+    var essentialLoadIsBreakerTotal: Bool {
+        !essentialLoadIsMeasured && abs(essentialLoadA - Ratings.essentialBreakerCeilingA) < 0.01
+    }
 
     /// Amp-hours already drawn from each battery since the timer started. 0 means full.
     var battery1UsedAh = 0.0
@@ -382,7 +389,7 @@ enum PowerModel {
                 "Emergency Power is drawn as built per the Bus Manager manual: a direct path from both batteries to the essential bus, "
                 + "with the main bus left as it is. Not yet confirmed on N721NE."))
         }
-        if !config.essentialLoadIsMeasured {
+        if config.essentialLoadIsBreakerTotal {
             a.append(Advisory(level: .info, text:
                 "Essential bus load is set to \(Self.ampsText(config.essentialLoadA)), the sum of the breaker ratings. "
                 + "The real draw is lower, so real times are longer. Enter a measured value in Settings."))

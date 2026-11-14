@@ -20,7 +20,7 @@ struct ContentView: View {
     @AppStorage("boxesCompact") private var boxesCompactRaw = ""
 
     @AppStorage("usablePercent") private var usablePercent = 80.0
-    @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialBreakerCeilingA
+    @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialDefaultLoadA
     @AppStorage("essentialLoadIsMeasured") private var essentialLoadIsMeasured = false
     /// Amps typed in Settings for each item on the EBBS. Their total is the EBBS load.
     @AppStorage("ebbsItemAmps") private var ebbsItemAmpsRaw = ""
@@ -219,7 +219,8 @@ struct ContentView: View {
         case .essentialBus:
             busCard(title: "ESSENTIAL BUS", detail: "Engine: both ECUs, ignition, one fuel pump · "
                     + PowerModel.ampsText(config.essentialLoadA)
-                    + (config.essentialLoadIsMeasured ? " measured" : " breaker total"),
+                    + (config.essentialLoadIsMeasured ? " measured"
+                        : (config.essentialLoadIsBreakerTotal ? " breaker total" : " set in Settings")),
                     source: essentialSource(result), time: essentialTime(result),
                     timeColor: result.essentialOverloadAtMin != nil ? Theme.battery
                         : timeColor(result.engineLostAtMin),

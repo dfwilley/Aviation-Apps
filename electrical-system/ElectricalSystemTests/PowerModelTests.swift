@@ -22,6 +22,8 @@ final class PowerModelTests: XCTestCase {
         XCTAssertEqual(Ratings.battery2RatedAh, 12.4)
         XCTAssertEqual(Ratings.ebbsRatedAh, 8.0)
         XCTAssertEqual(Ratings.essentialBreakerCeilingA, 35)   // 5 + 5 + 15 + 10
+        XCTAssertEqual(ElectricalConfig().essentialLoadA, 13)
+        XCTAssertFalse(ElectricalConfig().essentialLoadIsBreakerTotal)
         XCTAssertEqual(Ratings.ebbsPlannedLoads.reduce(0) { $0 + $1.amps }, Ratings.ebbsPlannedLoadA, accuracy: 0.001)
         let c = ElectricalConfig()
         XCTAssertEqual(c.battery1UsableAh, 12.48, accuracy: 0.001)
