@@ -7,6 +7,10 @@ struct SettingsView: View {
     @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialBreakerCeilingA
     @AppStorage("essentialLoadIsMeasured") private var essentialLoadIsMeasured = false
     @AppStorage("ebbsLoadA") private var ebbsLoadA = Ratings.ebbsPlannedLoadA
+    /// Amps typed in for each item on the EBBS, in the same order as the planned list.
+    @AppStorage("ebbsItemAmps") private var ebbsItemAmpsRaw = ""
+    @State private var ebbsFields: [String] = []
+    @FocusState private var focusedField: Int?
 
     var body: some View {
         NavigationStack {
@@ -40,20 +44,32 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Stepper(value: $ebbsLoadA, in: 0.5...12, step: 0.5) {
-                        row("EBBS load", PowerModel.ampsText(ebbsLoadA))
+                    ForEach(Array(Ratings.ebbsPlannedLoads.enumerated()), id: \.offset) { index, item in
+                        HStack {
+                            Text(item.name)
+                            Spacer()
+                            TextField(PowerModel.ampsText(item.amps), text: fieldBinding(index))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .monospacedDigit()
+                                .frame(width: 70)
+                                .focused($focusedField, equals: index)
+                                .accessibilityLabel("\(item.name) amps")
+                            Text("A").foregroundColor(.secondary)
+                        }
                     }
-                    ForEach(Ratings.ebbsPlannedLoads, id: \.name) { item in
-                        row(item.name, PowerModel.ampsText(item.amps))
-                            .foregroundColor(.secondary)
-                    }
-                    Button("Use the planned total (\(PowerModel.ampsText(Ratings.ebbsPlannedLoadA)))") {
-                        ebbsLoadA = Ratings.ebbsPlannedLoadA
+                    row("Total EBBS load", PowerModel.ampsText(ebbsLoadA))
+                        .font(.headline)
+                        .foregroundColor(ebbsLoadA > Ratings.ebbsMaxContinuousA ? .orange : .primary)
+                    Button("Use the planned values (\(PowerModel.ampsText(Ratings.ebbsPlannedLoadA)) total)") {
+                        focusedField = nil
+                        ebbsFields = Ratings.ebbsPlannedLoads.map { Self.fieldText($0.amps) }
+                        saveEbbsFields()
                     }
                 } header: {
                     Text("Backup battery (EBBS)")
                 } footer: {
-                    Text("Planned draws are from the VP-X load plan. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and transmitting on the SL-30 draws more than receiving.")
+                    Text("Type the amps each item draws. The total is what the EBBS time estimate uses. The starting values are from the VP-X load plan. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and the total turns orange above that. Transmitting on the SL-30 draws more than receiving.")
                 }
 
                 Section {
@@ -65,14 +81,55 @@ struct SettingsView: View {
                     Text("What the app assumes")
                 }
             }
+            .onAppear { loadEbbsFields() }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                }
             }
         }
+    }
+
+    // MARK: - EBBS item amps
+
+    private static func fieldText(_ amps: Double) -> String {
+        abs(amps - amps.rounded()) < 0.005 ? String(Int(amps.rounded())) : String(format: "%.1f", amps)
+    }
+
+    /// Fills the text boxes from what was saved, or from the planned values the first time.
+    private func loadEbbsFields() {
+        let saved = EBBSLoad.itemAmps(from: ebbsItemAmpsRaw)
+        if abs(saved.reduce(0, +) - ebbsLoadA) < 0.05 {
+            ebbsFields = saved.map { Self.fieldText($0) }
+        } else {
+            // A total was set the old way, without item values. Show it against the first item.
+            var amps = [Double](repeating: 0, count: saved.count)
+            amps[0] = ebbsLoadA
+            ebbsFields = amps.map { Self.fieldText($0) }
+        }
+    }
+
+    private func fieldBinding(_ index: Int) -> Binding<String> {
+        Binding(
+            get: { index < ebbsFields.count ? ebbsFields[index] : "" },
+            set: { text in
+                guard index < ebbsFields.count else { return }
+                ebbsFields[index] = text
+                saveEbbsFields()
+            }
+        )
+    }
+
+    private func saveEbbsFields() {
+        let amps = ebbsFields.map { EBBSLoad.parseAmps($0) }
+        ebbsItemAmpsRaw = amps.map { String($0) }.joined(separator: ",")
+        ebbsLoadA = amps.reduce(0, +)
     }
 
     private func row(_ name: String, _ value: String) -> some View {

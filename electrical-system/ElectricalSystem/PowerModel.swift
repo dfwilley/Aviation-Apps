@@ -50,6 +50,27 @@ enum Ratings {
     static let ebbsPlannedLoadA = 8.5
 }
 
+/// Helpers for the amps typed in for each item on the EBBS.
+enum EBBSLoad {
+    static let maxItemAmps = 20.0
+
+    /// Reads typed text as amps. Blank or unreadable text counts as 0. A comma works as a decimal point.
+    static func parseAmps(_ text: String) -> Double {
+        let cleaned = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(cleaned), value.isFinite else { return 0 }
+        return min(max(value, 0), maxItemAmps)
+    }
+
+    /// The saved amps for each item, falling back to the planned value for any that is missing.
+    static func itemAmps(from raw: String) -> [Double] {
+        let parts = raw.split(separator: ",", omittingEmptySubsequences: false).map { Double($0) }
+        return Ratings.ebbsPlannedLoads.enumerated().map { index, item in
+            if index < parts.count, let value = parts[index] { return min(max(value, 0), maxItemAmps) }
+            return item.amps
+        }
+    }
+}
+
 /// Values the owner can adjust in Settings.
 struct ElectricalConfig: Equatable {
     var usableFraction = 0.80

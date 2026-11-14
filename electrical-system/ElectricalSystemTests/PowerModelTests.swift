@@ -214,6 +214,23 @@ final class PowerModelTests: XCTestCase {
         XCTAssertEqual(r.ebbsLifeMin, 22.6, accuracy: 0.1)
     }
 
+    func testEBBSItemAmpsEntry() {
+        XCTAssertEqual(EBBSLoad.parseAmps("3.6"), 3.6)
+        XCTAssertEqual(EBBSLoad.parseAmps(" 2,5 "), 2.5)
+        XCTAssertEqual(EBBSLoad.parseAmps(""), 0)
+        XCTAssertEqual(EBBSLoad.parseAmps("abc"), 0)
+        XCTAssertEqual(EBBSLoad.parseAmps("-4"), 0)
+        XCTAssertEqual(EBBSLoad.parseAmps("99"), 20)
+        // Nothing saved yet: the planned values, which add up to 8.5 A.
+        XCTAssertEqual(EBBSLoad.itemAmps(from: "").reduce(0, +), 8.5, accuracy: 0.001)
+        // Saved values are used in order.
+        XCTAssertEqual(EBBSLoad.itemAmps(from: "3.0,2.0,1.0,0.5,0.5"), [3.0, 2.0, 1.0, 0.5, 0.5])
+        // Total 7 A on 6.4 Ah usable: 54.9 min.
+        var c = ElectricalConfig()
+        c.ebbsLoadA = 7
+        XCTAssertEqual(PowerModel.evaluate(ElectricalInputs(), c).ebbsLifeMin, 54.9, accuracy: 0.1)
+    }
+
     func testDurationText() {
         XCTAssertEqual(PowerModel.durationText(17.9), "17 min")
         XCTAssertEqual(PowerModel.durationText(74.9), "1 h 14 min")

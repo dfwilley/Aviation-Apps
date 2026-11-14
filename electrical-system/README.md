@@ -39,6 +39,8 @@ The power paths follow the EFII Bus Manager Installation Instructions (PN BM-1, 
 - The essential bus takes power through diodes from whichever side is at the higher voltage.
 - Emergency Power adds a direct path from both batteries to the essential bus.
 
+In Settings, the amps for each item on the EBBS (left HXr and AHRS, audio panel, transponder, SL-30 nav and com) can be typed in. Their total is the EBBS load used for its time estimate.
+
 ## Things still to confirm on the airplane
 
 These are marked in the app. Do not treat them as settled.
