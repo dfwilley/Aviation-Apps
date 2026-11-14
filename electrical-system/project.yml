@@ -35,6 +35,17 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1"
+  ElectricalSystemUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [ElectricalSystemUITests]
+    dependencies:
+      - target: ElectricalSystem
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        TEST_TARGET_NAME: ElectricalSystem
 schemes:
   ElectricalSystem:
     build:
@@ -43,3 +54,4 @@ schemes:
     test:
       targets:
         - ElectricalSystemTests
+        - ElectricalSystemUITests

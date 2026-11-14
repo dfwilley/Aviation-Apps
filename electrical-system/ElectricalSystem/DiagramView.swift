@@ -26,34 +26,40 @@ struct DiagramView: View {
         }
         .aspectRatio(Self.designSize.width / Self.designSize.height, contentMode: .fit)
         .accessibilityLabel("Electrical system diagram")
+        .accessibilityIdentifier("diagram")
         .overlay(
+            // One touch layer over the whole drawing. It works out which box was touched.
             GeometryReader { geo in
-                let s = geo.size.width / Self.designSize.width
-                ZStack {
-                    touchArea(Self.mainAltBox, s, "Main alternator", on: inputs.mainAltOK) { inputs.mainAltOK.toggle() }
-                    touchArea(Self.battery1Box, s, "Battery 1", on: inputs.battery1OK) { inputs.battery1OK.toggle() }
-                    touchArea(Self.backupAltBox, s, "Backup alternator", on: inputs.backupAltOK) { inputs.backupAltOK.toggle() }
-                    touchArea(Self.battery2Box, s, "Battery 2", on: inputs.battery2OK) { inputs.battery2OK.toggle() }
-                    touchArea(Self.emergencyBox, s, "Emergency power", on: inputs.emergencyPower, pad: 9) {
-                        inputs.emergencyPower.toggle()
-                    }
-                }
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        SpatialTapGesture().onEnded { tap in
+                            let s = geo.size.width / Self.designSize.width
+                            handleTouch(CGPoint(x: tap.location.x / s, y: tap.location.y / s))
+                        }
+                    )
             }
         )
+        .accessibilityAction(named: "Main alternator on or off") { inputs.mainAltOK.toggle() }
+        .accessibilityAction(named: "Battery 1 on or off") { inputs.battery1OK.toggle() }
+        .accessibilityAction(named: "Backup alternator on or off") { inputs.backupAltOK.toggle() }
+        .accessibilityAction(named: "Battery 2 on or off") { inputs.battery2OK.toggle() }
+        .accessibilityAction(named: "Emergency power on or off") { inputs.emergencyPower.toggle() }
     }
 
-    /// An invisible button laid over one box of the drawing. `pad` makes a small box easier to hit.
-    private func touchArea(_ r: CGRect, _ s: CGFloat, _ name: String, on: Bool, pad: CGFloat = 3,
-                           action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Color.clear
+    /// `point` is on the drawing grid. Boxes are padded so they are easy to hit.
+    private func handleTouch(_ point: CGPoint) {
+        if Self.emergencyBox.insetBy(dx: -8, dy: -8).contains(point) {
+            inputs.emergencyPower.toggle()
+        } else if Self.mainAltBox.insetBy(dx: -6, dy: -6).contains(point) {
+            inputs.mainAltOK.toggle()
+        } else if Self.battery1Box.insetBy(dx: -6, dy: -6).contains(point) {
+            inputs.battery1OK.toggle()
+        } else if Self.backupAltBox.insetBy(dx: -6, dy: -6).contains(point) {
+            inputs.backupAltOK.toggle()
+        } else if Self.battery2Box.insetBy(dx: -6, dy: -6).contains(point) {
+            inputs.battery2OK.toggle()
         }
-        .buttonStyle(.plain)
-        .frame(width: (r.width + 2 * pad) * s, height: (r.height + 2 * pad) * s)
-        .contentShape(Rectangle())
-        .position(x: r.midX * s, y: r.midY * s)
-        .accessibilityLabel(name)
-        .accessibilityValue(on ? "on" : "off")
     }
 
     // MARK: - Drawing

@@ -47,7 +47,7 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
 - Weight & Balance: `WeightAndBalanceTests/` checks results against the web app's numbers. `web/wb-core.js` and `WBModel.swift` hold the same math and model defaults; change both together and run `node web/test.js`. Model defaults come from Van's weight and balance quick-reference sheets (sources listed in `weight-and-balance/README.md`).
 - Cruise Perf: `cruise-performance/ios/ModelCheck/` compares the Swift math with `expected.json`, which was produced by the web app's own code.
-- Electrical System: `ElectricalSystemTests/` checks power paths and battery times against hand-worked numbers. Its build workflow runs the tests on every branch, and its TestFlight workflow runs them before uploading.
+- Electrical System: `ElectricalSystemTests/` checks power paths and battery times against hand-worked numbers, and `ElectricalSystemUITests/` runs the app on a simulator and touches the diagram. Its build workflow runs the tests on every branch, and its TestFlight workflow runs them before uploading.
 - These need a Mac, so they run in GitHub Actions, not locally on Linux or Windows. To test before merging, push to a branch and run the build workflow by hand on that branch (it has a "Run workflow" button).
 
 ## Things that are easy to get wrong
