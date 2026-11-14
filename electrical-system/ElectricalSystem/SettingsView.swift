@@ -6,7 +6,6 @@ struct SettingsView: View {
     @AppStorage("usablePercent") private var usablePercent = 80.0
     @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialBreakerCeilingA
     @AppStorage("essentialLoadIsMeasured") private var essentialLoadIsMeasured = false
-    @AppStorage("ebbsLoadA") private var ebbsLoadA = Ratings.ebbsPlannedLoadA
     /// Amps typed in for each item on the EBBS, in the same order as the planned list.
     @AppStorage("ebbsItemAmps") private var ebbsItemAmpsRaw = ""
     @State private var ebbsFields: [String] = []
@@ -69,7 +68,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Backup battery (EBBS)")
                 } footer: {
-                    Text("Type the amps each item draws. The total is what the EBBS time estimate uses. The starting values are from the VP-X load plan. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and the total turns orange above that. Transmitting on the SL-30 draws more than receiving.")
+                    Text("Type the amps each item draws. The total is what the EBBS time estimate uses. The starting values are from the VP-X load plan. The EBBS is rated for \(Int(Ratings.ebbsMaxContinuousA)) A continuous, and the total turns orange above that. The A210 figure is its planned draw, which is higher than it uses when only receiving. Transmitting on either radio draws more than receiving.")
                 }
 
                 Section {
@@ -104,15 +103,7 @@ struct SettingsView: View {
 
     /// Fills the text boxes from what was saved, or from the planned values the first time.
     private func loadEbbsFields() {
-        let saved = EBBSLoad.itemAmps(from: ebbsItemAmpsRaw)
-        if abs(saved.reduce(0, +) - ebbsLoadA) < 0.05 {
-            ebbsFields = saved.map { Self.fieldText($0) }
-        } else {
-            // A total was set the old way, without item values. Show it against the first item.
-            var amps = [Double](repeating: 0, count: saved.count)
-            amps[0] = ebbsLoadA
-            ebbsFields = amps.map { Self.fieldText($0) }
-        }
+        ebbsFields = EBBSLoad.itemAmps(from: ebbsItemAmpsRaw).map { Self.fieldText($0) }
     }
 
     private func fieldBinding(_ index: Int) -> Binding<String> {
@@ -129,7 +120,11 @@ struct SettingsView: View {
     private func saveEbbsFields() {
         let amps = ebbsFields.map { EBBSLoad.parseAmps($0) }
         ebbsItemAmpsRaw = amps.map { String($0) }.joined(separator: ",")
-        ebbsLoadA = amps.reduce(0, +)
+    }
+
+    /// The total of the item amps, which is the EBBS load the time estimate uses.
+    private var ebbsLoadA: Double {
+        EBBSLoad.itemAmps(from: ebbsItemAmpsRaw).reduce(0, +)
     }
 
     private func row(_ name: String, _ value: String) -> some View {

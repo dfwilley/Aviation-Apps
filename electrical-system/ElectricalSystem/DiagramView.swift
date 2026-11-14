@@ -146,7 +146,7 @@ struct DiagramView: View {
         box(ctx, s, CGRect(x: 215, y: 196, width: 118, height: 44),
             title: "EBBS  8 Ah", sub: ebbsText, border: ebbsBorder,
             subColor: result.ebbsState == .supplying ? Theme.battery : .white)
-        label(ctx, s, "L HXr · SL-30 · audio · xpdr", 274, 250, size: 7, color: Theme.dim)
+        label(ctx, s, "L HXr · SL-30 · A210 · audio · xpdr", 274, 250, size: 6.5, color: Theme.dim)
 
         // Sources
         sourceBox(ctx, s, Self.mainAltBox, title: "MAIN ALT",

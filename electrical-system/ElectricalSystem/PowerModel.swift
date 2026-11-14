@@ -46,8 +46,9 @@ enum Ratings {
         ("GTX-330 transponder", 1.5),
         ("SL-30 nav", 0.6),
         ("SL-30 com (receiving)", 0.3),
+        ("Icom A210 com", 4.0),
     ]
-    static let ebbsPlannedLoadA = 8.5
+    static let ebbsPlannedLoadA = 12.5
 }
 
 /// Helpers for the amps typed in for each item on the EBBS.
@@ -331,7 +332,7 @@ enum PowerModel {
                 + "The Mini-X runs about \(Int(Ratings.miniXMinutes)) minutes on its own battery."))
             if !inputs.emergencyPower {
                 a.append(Advisory(level: .caution, text:
-                    "EBBS is not on. Select EMERGENCY POWER to bring it on for the left HXr, SL-30, audio panel and transponder."))
+                    "EBBS is not on. Select EMERGENCY POWER to bring it on for the left HXr, SL-30, A210, audio panel and transponder."))
             }
         }
         if bothAltsOut, f.essentialPowered {

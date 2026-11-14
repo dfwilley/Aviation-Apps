@@ -22,14 +22,15 @@ struct ContentView: View {
     @AppStorage("usablePercent") private var usablePercent = 80.0
     @AppStorage("essentialLoadA") private var essentialLoadA = Ratings.essentialBreakerCeilingA
     @AppStorage("essentialLoadIsMeasured") private var essentialLoadIsMeasured = false
-    @AppStorage("ebbsLoadA") private var ebbsLoadA = Ratings.ebbsPlannedLoadA
+    /// Amps typed in Settings for each item on the EBBS. Their total is the EBBS load.
+    @AppStorage("ebbsItemAmps") private var ebbsItemAmpsRaw = ""
 
     private var config: ElectricalConfig {
         var c = ElectricalConfig()
         c.usableFraction = usablePercent / 100
         c.essentialLoadA = essentialLoadA
         c.essentialLoadIsMeasured = essentialLoadIsMeasured
-        c.ebbsLoadA = ebbsLoadA
+        c.ebbsLoadA = EBBSLoad.itemAmps(from: ebbsItemAmpsRaw).reduce(0, +)
         c.battery1UsedAh = battery1UsedAh
         c.battery2UsedAh = battery2UsedAh
         c.ebbsUsedAh = ebbsUsedAh
@@ -441,7 +442,7 @@ struct ContentView: View {
         switch r.ebbsState {
         case .notArmed: return "Not armed. Comes on with Emergency Power. Would last \(life)."
         case .armed: return "Armed. Takes over if the main bus is lost. Would last \(life)."
-        case .supplying: return "Running the left HXr, SL-30, audio panel and transponder · \(life)"
+        case .supplying: return "Running the left HXr, SL-30, A210, audio panel and transponder · \(life)"
         }
     }
 
