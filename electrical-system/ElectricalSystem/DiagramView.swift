@@ -162,7 +162,7 @@ struct DiagramView: View {
 
     private func wire(for state: BatteryState) -> Kind {
         switch state {
-        case .failed, .standby: return .off
+        case .failed, .standby, .empty: return .off
         case .charging: return .alt
         case .discharging: return .battery
         }
@@ -173,6 +173,7 @@ struct DiagramView: View {
         case .failed: return "FAILED"
         case .charging: return "Charging"
         case .standby: return "Standing by"
+        case .empty: return "EMPTY"
         case .discharging(let amps): return "Supplying \(PowerModel.ampsText(amps))"
         }
     }

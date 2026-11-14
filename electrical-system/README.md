@@ -11,6 +11,8 @@ Shows on the phone as "N721NE Elec". Bundle ID `com.dfwilley.electricalsystem`.
 - Touch the EMER box to switch Emergency Power on or off.
 - An engine RPM choice (the backup alternator gives less near idle).
 - A slider for main bus load, 0 to 40 A. Set it to the total on the VP-X page.
+- A timer that starts with the first failed alternator or battery. From then on the app draws down each battery at the current load, so the times count down, and the timer and the affected box flash red in the last 5 minutes. The timer assumes full batteries at the first failure and clears when everything is back on or Reset is pressed. The screen stays awake while it runs.
+- The data boxes below the diagram can be moved (hold and drag, or use the arrange button) and switched between full and small size.
 - For each state: which source feeds each bus, how long each bus lasts, each battery's rated and usable capacity, and plain-language notes.
 
 Wire colors: green is alternator power, amber is battery power, gray is no current, red is failed.

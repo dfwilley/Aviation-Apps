@@ -194,6 +194,26 @@ final class PowerModelTests: XCTestCase {
         assertMinutes(r.mainBusLostAtMin, 93.6)
     }
 
+    func testChargeAlreadyUsedShortensTheTimes() {
+        var i = ElectricalInputs()
+        i.mainAltOK = false
+        i.mainBusLoadA = 10
+        var c = config()
+        // Half of Battery 1's 12.48 Ah is gone: 6.24 Ah / 10 A = 37.4 min.
+        c.battery1UsedAh = 6.24
+        var r = PowerModel.evaluate(i, c)
+        assertMinutes(r.mainBusLostAtMin, 37.4)
+        // All of it gone: the main bus is dead now and Battery 1 shows as empty.
+        c.battery1UsedAh = 12.48
+        r = PowerModel.evaluate(i, c)
+        XCTAssertEqual(r.mainBusLostAtMin, 0)
+        XCTAssertEqual(r.battery1State, .empty)
+        // EBBS with 3.2 of its 6.4 Ah used: 3.2 / 8.5 A = 22.6 min.
+        c.ebbsUsedAh = 3.2
+        r = PowerModel.evaluate(i, c)
+        XCTAssertEqual(r.ebbsLifeMin, 22.6, accuracy: 0.1)
+    }
+
     func testDurationText() {
         XCTAssertEqual(PowerModel.durationText(17.9), "17 min")
         XCTAssertEqual(PowerModel.durationText(74.9), "1 h 14 min")

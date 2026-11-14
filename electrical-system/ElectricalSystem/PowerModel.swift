@@ -57,6 +57,15 @@ struct ElectricalConfig: Equatable {
     var essentialLoadIsMeasured = false
     var ebbsLoadA = Ratings.ebbsPlannedLoadA
 
+    /// Amp-hours already drawn from each battery since the timer started. 0 means full.
+    var battery1UsedAh = 0.0
+    var battery2UsedAh = 0.0
+    var ebbsUsedAh = 0.0
+
+    var battery1LeftAh: Double { max(0, battery1UsableAh - battery1UsedAh) }
+    var battery2LeftAh: Double { max(0, battery2UsableAh - battery2UsedAh) }
+    var ebbsLeftAh: Double { max(0, ebbsUsableAh - ebbsUsedAh) }
+
     var battery1UsableAh: Double { Ratings.battery1RatedAh * usableFraction }
     var battery2UsableAh: Double { Ratings.battery2RatedAh * usableFraction }
     var ebbsUsableAh: Double { Ratings.ebbsRatedAh * usableFraction }
@@ -107,6 +116,7 @@ enum BatteryState: Equatable {
     case failed
     case charging
     case standby           // connected, not charging, not supplying
+    case empty             // connected, used up, and nothing is charging it
     case discharging(amps: Double)
 }
 
@@ -145,6 +155,9 @@ struct ElectricalResult: Equatable {
 }
 
 enum PowerModel {
+    /// A time-left figure at or under this many minutes counts as "about to expire".
+    static let expiryWarningMin = 5.0
+
     /// Longest time the estimate looks ahead.
     static let horizonMin = 600.0
     private static let stepMin = 0.1
@@ -204,32 +217,33 @@ enum PowerModel {
         }
 
         r.battery1State = batteryState(ok: inputs.battery1OK, out: r.now.battery1Out,
-                                       charging: inputs.mainAltOK)
+                                       charging: inputs.mainAltOK, leftAh: config.battery1LeftAh)
         r.battery2State = batteryState(ok: inputs.battery2OK, out: r.now.battery2Out,
-                                       charging: inputs.backupAltOK)
+                                       charging: inputs.backupAltOK, leftAh: config.battery2LeftAh)
 
         if !inputs.emergencyPower {
             r.ebbsState = .notArmed
         } else {
             r.ebbsState = r.now.mainBusPowered ? .armed : .supplying
         }
-        r.ebbsLifeMin = config.ebbsLoadA > 0 ? config.ebbsUsableAh / config.ebbsLoadA * 60 : horizonMin
+        r.ebbsLifeMin = config.ebbsLoadA > 0 ? config.ebbsLeftAh / config.ebbsLoadA * 60 : horizonMin
 
         r.advisories = advisories(inputs, config, r)
         return r
     }
 
-    private static func batteryState(ok: Bool, out: Double, charging: Bool) -> BatteryState {
+    private static func batteryState(ok: Bool, out: Double, charging: Bool, leftAh: Double) -> BatteryState {
         if !ok { return .failed }
         if out > 0.01 { return .discharging(amps: out) }
-        return charging ? .charging : .standby
+        if charging { return .charging }
+        return leftAh <= 1e-9 ? .empty : .standby
     }
 
     /// Steps forward in time, draining the batteries, until something runs out.
     private static func simulate(_ inputs: ElectricalInputs, _ config: ElectricalConfig) -> ElectricalResult {
         var r = ElectricalResult()
-        var left1 = inputs.battery1OK ? config.battery1UsableAh : 0
-        var left2 = inputs.battery2OK ? config.battery2UsableAh : 0
+        var left1 = inputs.battery1OK ? config.battery1LeftAh : 0
+        var left2 = inputs.battery2OK ? config.battery2LeftAh : 0
         let stepHours = stepMin / 60
         var t = 0.0
         var first = true
