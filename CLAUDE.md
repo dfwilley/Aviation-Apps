@@ -22,6 +22,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 | `cruise-performance/` | Native iPhone app (SwiftUI), "Cruise Perf". Bundle ID `com.n721ne.cruise` | Checked-in Xcode project in `ios/` (no XcodeGen) |
 | `electrical-system/` | Native iPhone app (SwiftUI), "N721NE Elec". Live diagram of the electrical system with power paths and battery life. Bundle ID `com.dfwilley.electricalsystem` | XcodeGen from `project.yml` |
 | `fuel-planner/` | Web app, plain HTML and JavaScript, no build step | GitHub Pages |
+| `N721NE-To-Do-List/` | Web app, one HTML file, no build step. A checklist of flight and ground test points; each browser keeps its own copy of the list | GitHub Pages |
 | `hangar-board/` | Arduino firmware for an ESP32 e-paper status board, plus a web installer page | Arduino IDE; compiled `.bin` files are checked in under `firmware/` |
 
 `index.html` at the top is the GitHub Pages landing page (https://dfwilley.github.io/Aviation-Apps/).
@@ -36,7 +37,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 - Build numbers are the workflow run number plus 1000; don't set them by hand.
 - Signing uses four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`. Never print or log them. The helper scripts are `hangar-voice-log/tools/asc_precheck.py` and `asc_signing.py`.
 - Unsigned `.ipa` files for Sideloadly are published on the Releases page with tags that start with the app's folder name.
-- The web pages (Fuel Planner, the Hangar Board installer, Hangar Log's privacy and support pages) go live on GitHub Pages as soon as they are pushed.
+- The web pages (Fuel Planner, the N721NE To Do List, the Hangar Board installer, Hangar Log's privacy and support pages) go live on GitHub Pages as soon as they are pushed.
 
 For anything larger than a small fix, work on a branch and merge to `main` only when it is ready, because the merge is what ships it.
 
