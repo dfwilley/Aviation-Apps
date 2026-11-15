@@ -9,6 +9,7 @@ N721NE and flying-related apps, kept together in one place. Each app lives in it
 | Cruise Perf | `cruise-performance/` | Native iPhone | Actions → *Cruise Perf - build iPhone app* → Run workflow |
 | Electrical System | `electrical-system/` | Native iPhone | TestFlight, or the `.ipa` on the Releases page |
 | Fuel Planner | `fuel-planner/` | Web app | https://dfwilley.github.io/Aviation-Apps/fuel-planner/ |
+| N721NE To Do List | `N721NE-To-Do-List/` | Web app | https://dfwilley.github.io/Aviation-Apps/N721NE-To-Do-List/ |
 | Hangar Board | `hangar-board/` | ESP32 e-paper board | Installer page: https://dfwilley.github.io/Aviation-Apps/hangar-board/ |
 
 ## Builds
