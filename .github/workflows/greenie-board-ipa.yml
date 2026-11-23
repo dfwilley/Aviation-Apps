@@ -67,8 +67,9 @@ jobs:
           xcrun simctl io "$SIM_ID" screenshot build/screenshot-light.png
           xcrun simctl terminate "$SIM_ID" com.dfwilley.greenieboard
           xcrun simctl ui "$SIM_ID" appearance dark
+          sleep 3
           xcrun simctl launch "$SIM_ID" com.dfwilley.greenieboard
-          sleep 8
+          sleep 20
           xcrun simctl io "$SIM_ID" screenshot build/screenshot-dark.png
 
       - name: Build unsigned app for iPhone
