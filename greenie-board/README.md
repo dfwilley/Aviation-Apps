@@ -8,7 +8,7 @@ Open it at https://dfwilley.github.io/Aviation-Apps/greenie-board/
 
 1. After a flight, copy the `DEMO-....LOG` files from the HXr's USB stick to the computer (or to Dropbox for the phone).
 2. Open the page, press **Choose HXr log files**, and pick all the files from the flight. The landing is usually in the last one or two.
-3. Each touchdown on a known runway is added to the board as a box. The page opens on the board alone: your last 30 landings in a grid 6 across and 5 down, oldest at the top left, with one small Import button under it. Settings and How grading works are links at the bottom of the page. Tap a box to open that landing's page: the grade, the LSO comment, the same thing in plain words, the numbers, and a picture of the approach.
+3. Each touchdown on a known runway is added to the board as a box. The page opens on the board alone: your last 30 landings in a grid 6 across and 5 down, oldest at the top left, with one small Import button under it. Once there are more than 30, Older and Newer buttons page back through the rest, 30 at a time. Settings and How grading works are links at the bottom of the page. Tap a box to open that landing's page: the grade, the LSO comment, the same thing in plain words, the numbers, and a picture of the approach.
 
 The files are read in the browser. Nothing is uploaded. The board is kept in that browser only; **Settings** has buttons to save and load a backup file, which is also how to move the board to another device.
 

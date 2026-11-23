@@ -34,6 +34,7 @@ h2{font-size:1.15rem;margin:0 0 8px}
 .spacer{flex:1}
 .btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:disabled{opacity:.4;cursor:default}
 .btn.small{padding:6px 10px;min-height:36px;font-size:.9rem}
 .btn.danger{color:var(--bad)}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -109,7 +110,13 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
     <div class="bar" style="margin-top:10px">
       <button class="btn small" id="pickBtn">Import landings</button>
       <input type="file" id="file" multiple hidden>
+      <span class="spacer"></span>
+      <span id="pager" hidden>
+        <button class="btn small" id="olderBtn" aria-label="Older landings">&lsaquo; Older</button>
+        <button class="btn small" id="newerBtn" aria-label="Newer landings">Newer &rsaquo;</button>
+      </span>
     </div>
+    <p class="hint" id="pageInfo" hidden style="max-width:460px;margin:6px auto 0;text-align:right"></p>
     <div id="importMsg" role="status" aria-live="polite"></div>
   </div>
 
@@ -120,7 +127,7 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
 </main>
 <footer>
   <p><button class="link" id="setBtn">Settings</button> · <button class="link" id="howBtn">How grading works</button></p>
-  <p>The board shows your last 30 landings, oldest at the top left. Tap a box to open that landing. To import, pick all the DEMO-….LOG files from a flight on the HXr's USB stick; they are read on this device and nothing is uploaded. Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
+  <p>The board shows your last 30 landings, oldest at the top left. With more than 30, the Older and Newer buttons page through the rest. Tap a box to open that landing. To import, pick all the DEMO-….LOG files from a flight on the HXr's USB stick; they are read on this device and nothing is uploaded. Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
 </footer>
 
 <dialog id="setDlg" aria-labelledby="setH">
@@ -217,8 +224,9 @@ function side(n){ n=Math.round(n); return n===0?'on centerline':fmt(Math.abs(n))
 function shown(){
   var list=state.passes.slice().sort(function(a,b){return a.t-b.t;});
   if(state.settings.scope==='KTUS') list=list.filter(function(p){return p.airport==='KTUS';});
-  return list.slice(-30);     // the board holds the last 30 landings
+  return list;
 }
+var page=0;     // 0 = the newest 30 landings, 1 = the 30 before those, and so on
 
 function square(r,tag,night){
   var b=el(tag||'button','sq '+r.color+(r.underline?' u':'')+(night?' night':''));
@@ -236,7 +244,16 @@ function render(){
 function renderBoard(){
   var st=state.settings;
   $('pilot').textContent=st.pilot||'N721NE';
-  var list=shown();
+  var all=shown(), pages=Math.max(1,Math.ceil(all.length/30));
+  page=Math.min(Math.max(0,page),pages-1);
+  var end=all.length-30*page, start=Math.max(0,end-30);
+  var list=all.slice(start,end);
+  $('pager').hidden=pages<2; $('pageInfo').hidden=pages<2;
+  $('olderBtn').disabled=page>=pages-1; $('newerBtn').disabled=page===0;
+  if(pages>1){
+    var day=function(p){ return new Date(p.t*1000).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); };
+    $('pageInfo').textContent='Landings '+(start+1)+' to '+end+' of '+all.length+' \u00b7 '+day(list[0])+' to '+day(list[list.length-1]);
+  }
   var graded=list.map(function(p){ return {p:p,r:Greenie.gradePass(p,st)}; });
   var sq=$('squares'); sq.textContent='';
   graded.forEach(function(g){
@@ -406,7 +423,7 @@ async function addFiles(files){
       if(state.passes.some(function(q){ return Math.abs(q.t-p.t)<20; })){ dup++; return; }
       state.passes.push(p); added++;
     });
-    if(added){ save(); render(); }
+    if(added){ page=0; save(); render(); }
     var parts=[];
     if(added) parts.push(added+(added===1?' landing':' landings')+' added to the board.');
     if(dup) parts.push(dup+(dup===1?' landing was':' landings were')+' already on the board.');
@@ -425,6 +442,8 @@ $('pickBtn').addEventListener('click',function(){ $('file').click(); });
 $('file').addEventListener('change',function(){ var fs=Array.prototype.slice.call(this.files); this.value=''; addFiles(fs); });
 
 $('backBtn').addEventListener('click',toBoard);
+$('olderBtn').addEventListener('click',function(){ page++; renderBoard(); });
+$('newerBtn').addEventListener('click',function(){ page--; renderBoard(); });
 window.addEventListener('hashchange',render);
 
 // ---------- settings ----------
