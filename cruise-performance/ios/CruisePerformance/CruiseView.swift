@@ -191,7 +191,7 @@ struct CruiseView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("N721NE · VAN'S RV-14 · LYCOMING YIO-390 · HARTZELL 74 IN CONSTANT-SPEED")
+            Text("N721NE · VAN'S RV-14 · LYCOMING YIO-390-EXP10 · HARTZELL 74 IN CONSTANT-SPEED")
                 .font(.caption2.weight(.semibold))
                 .tracking(1.2)
                 .foregroundStyle(Theme.gold)
