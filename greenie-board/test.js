@@ -203,4 +203,132 @@ test('day and night at Tucson', () => {
   assert.strictEqual(run({}).passes[0].night, false);
 });
 
+// ---------- the board page: paging through more than 30 landings ----------
+const { openBoard } = require('./test-dom.js');
+// n landings one day apart, oldest first. Every third one lands long, so the grades vary.
+function board(n) {
+  const good = run({}).passes[0], long = run({ tdAlong: 700 }).passes[0];
+  const passes = [];
+  for (let i = 0; i < n; i++) {
+    const p = JSON.parse(JSON.stringify(i % 3 ? good : long));
+    p.t = good.t + i * 86400;
+    passes.push(p);
+  }
+  return { passes, settings: {} };
+}
+const tOf = (b, i) => Math.round(b.passes[i].t);
+// Taps a square and returns which landing (0 = oldest) it opened.
+const landingAt = (pg, b, sq) => { sq.click(); const t = +pg.win.location.hash.replace('#landing=', ''); return b.passes.findIndex(p => Math.round(p.t) === t); };
+
+test('30 landings or fewer: no paging buttons', () => {
+  const pg = openBoard(board(30));
+  assert.strictEqual(pg.$('pager').hidden, true);
+  assert.strictEqual(pg.$('pageInfo').hidden, true);
+  assert.strictEqual(pg.squares().length, 30);
+  assert.strictEqual(pg.blanks().length, 0);
+});
+
+test('33 landings: the newest 30 first, then the oldest 3', () => {
+  const b = board(33), pg = openBoard(b);
+  assert.strictEqual(pg.$('pager').hidden, false);
+  assert.strictEqual(pg.$('pageInfo').hidden, false);
+  assert.strictEqual(pg.$('olderBtn').disabled, false);
+  assert.strictEqual(pg.$('newerBtn').disabled, true);
+  assert.match(pg.$('pageInfo').textContent, /^Landings 4 to 33 of 33 · /);
+  assert.strictEqual(pg.squares().length, 30);
+  // Oldest at the top left, newest at the bottom right.
+  assert.strictEqual(landingAt(pg, b, pg.squares()[0]), 3);
+  pg.win.location.hash = '';
+  assert.strictEqual(landingAt(pg, b, pg.squares()[29]), 32);
+  pg.win.location.hash = '';
+  assert.ok(pg.onBoard());
+  pg.$('olderBtn').click();
+  assert.match(pg.$('pageInfo').textContent, /^Landings 1 to 3 of 33 · /);
+  assert.strictEqual(pg.$('olderBtn').disabled, true);
+  assert.strictEqual(pg.$('newerBtn').disabled, false);
+  assert.strictEqual(pg.squares().length, 3);
+  assert.strictEqual(pg.blanks().length, 27);
+  pg.$('olderBtn').click();   // disabled: nothing happens
+  assert.match(pg.$('pageInfo').textContent, /^Landings 1 to 3 of 33 · /);
+
+  pg.$('newerBtn').click();
+  assert.match(pg.$('pageInfo').textContent, /^Landings 4 to 33 of 33 · /);
+  assert.strictEqual(pg.$('newerBtn').disabled, true);
+});
+
+test('61 landings: three pages, the last holds one landing', () => {
+  const b = board(61), pg = openBoard(b);
+  const seen = [];
+  const info = () => pg.$('pageInfo').textContent;
+  assert.match(info(), /^Landings 32 to 61 of 61 · /);
+  seen.push(...pg.squares().map(s => s.title));
+  pg.$('olderBtn').click();
+  assert.match(info(), /^Landings 2 to 31 of 61 · /);
+  assert.strictEqual(pg.$('olderBtn').disabled, false);
+  assert.strictEqual(pg.$('newerBtn').disabled, false);
+  seen.push(...pg.squares().map(s => s.title));
+  pg.$('olderBtn').click();
+  // One landing on the page: no "1 to 1", and the date is not repeated.
+  const day = new Date(b.passes[0].t * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  assert.strictEqual(info(), 'Landing 1 of 61 · ' + day);
+  assert.strictEqual(pg.$('olderBtn').disabled, true);
+  assert.strictEqual(pg.squares().length, 1);
+  assert.strictEqual(pg.blanks().length, 29);
+  seen.push(...pg.squares().map(s => s.title));
+  // Every landing shows exactly once across the pages.
+  assert.strictEqual(seen.length, 61);
+  assert.strictEqual(new Set(seen).size, 61);
+  // The date range on a full page runs from its first to its last landing.
+  pg.$('newerBtn').click();
+  const d = i => new Date(b.passes[i].t * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  assert.strictEqual(info(), 'Landings 2 to 31 of 61 · ' + d(1) + ' to ' + d(30));
+});
+
+test('61 landings: tapping a grade on an older page opens that landing, and Back returns to the same page', () => {
+  const b = board(61), pg = openBoard(b);
+  pg.$('olderBtn').click();
+  const sq = pg.squares()[4];          // landing 6 of 61 (index 5)
+  sq.click();
+  assert.strictEqual(pg.win.location.hash, '#landing=' + tOf(b, 5));
+  assert.ok(pg.onDetail(), 'the details page is showing');
+  assert.ok(pg.$('detail').textContent.includes('KTST runway 09'), pg.$('detail').textContent.slice(0, 80));
+  pg.$('backBtn').click();
+  assert.ok(pg.onBoard());
+  assert.match(pg.$('pageInfo').textContent, /^Landings 2 to 31 of 61 · /);
+  // The phone's own back gesture does the same.
+  pg.squares()[0].click();
+  assert.ok(pg.onDetail());
+  pg.win.history.back();
+  assert.ok(pg.onBoard());
+  assert.match(pg.$('pageInfo').textContent, /^Landings 2 to 31 of 61 · /);
+  // The single landing on the last page opens too.
+  pg.$('olderBtn').click();
+  pg.squares()[0].click();
+  assert.strictEqual(pg.win.location.hash, '#landing=' + tOf(b, 0));
+  assert.ok(pg.onDetail());
+});
+
+test('a link straight to an old landing opens it even though it is not on the first page', () => {
+  const b = board(61), pg = openBoard(b, '#landing=' + tOf(b, 2));
+  assert.ok(pg.onDetail());
+});
+
+test('the KTUS-only setting pages through only the KTUS landings', () => {
+  const b = board(40);
+  b.passes.forEach((p, i) => { p.airport = i < 35 ? 'KTUS' : 'KTST'; });
+  b.settings.scope = 'KTUS';
+  const pg = openBoard(b);
+  assert.match(pg.$('pageInfo').textContent, /^Landings 6 to 35 of 35 · /);
+  pg.$('olderBtn').click();
+  assert.match(pg.$('pageInfo').textContent, /^Landings 1 to 5 of 35 · /);
+});
+
+test('the page average covers only the landings on that page', () => {
+  const b = board(33), pg = openBoard(b);
+  const avg = list => (list.reduce((s, p) => s + Greenie.gradePass(p).points, 0) / list.length).toFixed(2) + ' average';
+  assert.strictEqual(pg.$('gpa').textContent, avg(b.passes.slice(3)));
+  pg.$('olderBtn').click();
+  assert.strictEqual(pg.$('gpa').textContent, avg(b.passes.slice(0, 3)));
+});
+
 console.log(passed + ' passed');

@@ -87,6 +87,7 @@ Real greenie boards were not standard. Accounts from squadron pilots online desc
 | `grt-log.js` | Reads the HXr recording |
 | `grade.js` | Finds landings and grades them |
 | `runways.json` | Runway list, built by `tools/make_runways.py` from https://ourairports.com/data/ (downloaded November 23, 2026) |
-| `test.js` | Tests: `node test.js` |
+| `test.js` | Tests: `node test.js`. Checks the reader and the grades, and pages the board with 33 and 61 made-up landings |
+| `test-dom.js` | A tiny stand-in browser so `test.js` can run the board page under Node with nothing to install |
 
 The owner's real recordings are personal flight data and are not in this repository.
