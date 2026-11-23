@@ -1,0 +1,132 @@
+name: Greenie Board - build iPhone app
+
+# Wraps the Greenie Board web page in an iPhone app and builds an unsigned
+# .ipa for Sideloadly. Every branch is built as a check; only main publishes.
+# The newest app is always at the same link:
+# https://github.com/dfwilley/Aviation-Apps/releases/download/greenie-board-latest/GreenieBoard.ipa
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'greenie-board/**'
+      - '.github/workflows/greenie-board-ipa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: greenie-board
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the log reader and grading first
+        run: node test.js
+
+      - name: Generate Xcode project
+        working-directory: greenie-board/ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Take a screenshot on an iPhone simulator
+        working-directory: greenie-board/ios
+        run: |
+          set -euo pipefail
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)["devices"]
+          ios = sorted([k for k in data if "iOS" in k], reverse=True)
+          for runtime in ios:
+              for d in data[runtime]:
+                  if d["name"].startswith("iPhone"):
+                      print(d["udid"]); sys.exit(0)
+          sys.exit("No iPhone simulator found")
+          ')
+          xcodebuild build \
+            -project GreenieBoard.xcodeproj \
+            -scheme GreenieBoard \
+            -destination "id=$SIM_ID" \
+            -derivedDataPath build/sim \
+            CODE_SIGNING_ALLOWED=NO -quiet
+          APP=$(find build/sim/Build/Products -name "GreenieBoard.app" -maxdepth 2 | head -1)
+          test -f "$APP/Web/index.html"
+          test -f "$APP/Web/runways.json"
+          xcrun simctl boot "$SIM_ID" || true
+          xcrun simctl bootstatus "$SIM_ID" -b
+          xcrun simctl install "$SIM_ID" "$APP"
+          xcrun simctl ui "$SIM_ID" appearance light
+          xcrun simctl launch "$SIM_ID" com.dfwilley.greenieboard
+          sleep 10
+          xcrun simctl io "$SIM_ID" screenshot build/screenshot-light.png
+          xcrun simctl terminate "$SIM_ID" com.dfwilley.greenieboard
+          xcrun simctl ui "$SIM_ID" appearance dark
+          xcrun simctl launch "$SIM_ID" com.dfwilley.greenieboard
+          sleep 8
+          xcrun simctl io "$SIM_ID" screenshot build/screenshot-dark.png
+
+      - name: Build unsigned app for iPhone
+        working-directory: greenie-board/ios
+        run: |
+          xcodebuild archive \
+            -project GreenieBoard.xcodeproj \
+            -scheme GreenieBoard \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -archivePath build/GreenieBoard.xcarchive \
+            CURRENT_PROJECT_VERSION=$(( ${{ github.run_number }} + 1000 )) \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package .ipa file
+        working-directory: greenie-board/ios
+        run: |
+          set -euo pipefail
+          APP=build/GreenieBoard.xcarchive/Products/Applications/GreenieBoard.app
+          test -f "$APP/Web/index.html"
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          cd build && zip -qry GreenieBoard.ipa Payload
+          ls -la GreenieBoard.ipa
+
+      - name: Keep the app file and screenshots with this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenieBoard-ipa
+          path: |
+            greenie-board/ios/build/GreenieBoard.ipa
+            greenie-board/ios/build/screenshot-light.png
+            greenie-board/ios/build/screenshot-dark.png
+
+      - name: Publish to the fixed download link
+        if: github.ref == 'refs/heads/main'
+        working-directory: greenie-board/ios/build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="greenie-board-latest"
+          NOTES="Greenie Board for iPhone, build $(( ${{ github.run_number }} + 1000 )) from commit ${GITHUB_SHA::7}.
+
+          Unsigned app file for Sideloadly. Sign in to Sideloadly with your paid Apple Developer Apple ID; the install lasts about a year. The app keeps its own board, separate from the web page in Safari: use Settings, Save backup on one and Load backup on the other to move landings across.
+
+          This release is replaced by every new build, so the download link never changes:
+          https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/GreenieBoard.ipa"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" GreenieBoard.ipa screenshot-light.png screenshot-dark.png --clobber
+            gh release edit "$TAG" --title "Greenie Board for iPhone (newest)" --notes "$NOTES" --latest=false
+          else
+            gh release create "$TAG" GreenieBoard.ipa screenshot-light.png screenshot-dark.png \
+              --target "$GITHUB_SHA" \
+              --title "Greenie Board for iPhone (newest)" \
+              --notes "$NOTES" \
+              --latest=false
+          fi
