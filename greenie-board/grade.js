@@ -282,12 +282,11 @@
     }
 
     // Touchdown.
-    var td = pass.td, past = td.along - st.aimFt, wire = null, bolter = false, shortOfRunway = td.along < 0;
+    var td = pass.td, past = td.along - st.aimFt, onTarget = false, bolter = false, shortOfRunway = td.along < 0;
     if (shortOfRunway) add('SHORT', 3, TD, 'touched down before the threshold');
-    else if (past < -150) { wire = 1; add(null, 1, TD, 'touched down a little short of the target (1 wire)'); }
-    else if (past < 0) wire = 2;
-    else if (past <= 200) wire = 3;
-    else if (past <= 500) { wire = 4; add(null, 1, TD, 'touched down a little long (4 wire)'); }
+    else if (past < -150) add('SHORT', 1, TD, 'touched down a little short of the target');
+    else if (past <= 200) onTarget = true;
+    else if (past <= 500) add('LONG', 1, TD, 'touched down a little long');
     else if (past <= 1000) add('LONG', 2, TD, 'touched down long');
     else { bolter = true; add('LONG', 2, TD, 'touched down very long (more than 1,000 ft past the target)'); }
     var tl = level(td.cross, TD.lineup.map(function (v) { return v * wScale; }));
@@ -313,24 +312,21 @@
     else if (shortOfRunway || worstClose >= 3 || score >= 14) grade = 'NOGRADE';
     else if (bolter) grade = 'BOLTER';
     else if (worstClose >= 2 || score >= 6) grade = 'FAIR';
-    else if (score === 0 && (wire === 2 || wire === 3)) grade = 'OKU';
+    else if (score === 0 && onTarget) grade = 'OKU';
     else grade = 'OK';
 
     // The comment an LSO would write: (X) = a little, X = clearly, underlined = way off.
-    // (The 1 and 4 wires speak for themselves, so they get no code of their own.)
-    var tokens = devs.filter(function (d) { return d.code; }).map(function (d) {
+    var tokens = devs.map(function (d) {
       return { text: d.code + (d.phase.key === 'TD' ? '' : d.phase.key), level: d.level };
     });
     if (grooveDev) tokens.unshift({ text: grooveDev.code, level: 1 });
-    if (wire) tokens.push({ text: wire + ' WIRE', level: 2 });
-    else if (bolter) tokens.push({ text: 'BOLTER', level: 2 });
     var plain = devs.map(function (d) { return d.text; });
     if (grooveDev) plain.unshift(grooveDev.text);
 
     return {
       grade: grade, symbol: GRADES[grade].symbol, points: GRADES[grade].points, color: GRADES[grade].color,
       name: GRADES[grade].name, underline: !!GRADES[grade].underline,
-      tokens: tokens, plain: plain, wire: wire, score: score,
+      tokens: tokens, plain: plain, onTarget: onTarget, score: score,
       phases: phases, ramp: ramp, grooveSecs: grooveSecs, grooveFromStart: grooveFromStart,
       settings: st
     };

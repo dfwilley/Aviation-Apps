@@ -8,7 +8,7 @@ Open it at https://dfwilley.github.io/Aviation-Apps/greenie-board/
 
 1. After a flight, copy the `DEMO-....LOG` files from the HXr's USB stick to the computer (or to Dropbox for the phone).
 2. Open the page, press **Choose HXr log files**, and pick all the files from the flight. The landing is usually in the last one or two.
-3. Each touchdown on a known runway is added to the board with a grade, the LSO comment, the same thing in plain words, the numbers, and a picture of the approach.
+3. Each touchdown on a known runway is added to the board as a box. The page opens on the board alone, showing the last 30 days (a switch shows every landing). Tap a box to open that landing's page: the grade, the LSO comment, the same thing in plain words, the numbers, and a picture of the approach.
 
 The files are read in the browser. Nothing is uploaded. The board is kept in that browser only; **Settings** has buttons to save and load a backup file, which is also how to move the board to another device.
 
@@ -53,13 +53,13 @@ The targets are in **Settings**. They are debrief settings chosen by Claude as s
 
 Lineup limits from in close onward are scaled for runway width (150 ft is full scale, never less than half).
 
-Wires, measured from the target point: 1 wire is more than 150 ft short, 2 wire is up to 150 ft short, 3 wire is up to 200 ft long, 4 wire is up to 500 ft long. More than 1,000 ft long is a bolter.
+Touchdown point, measured from the target: more than 150 ft short is (SHORT), 200 to 500 ft long is (LONG), 500 to 1,000 ft long is LONG, and more than 1,000 ft long is a bolter. Before the threshold is SHORT underlined.
 
 Each comment scores 1, 3 or 8 points (a little, clearly, way off), multiplied by 0.5 at the start, 1 in the middle, 1.5 in close and 2 at the ramp and touchdown.
 
 | Grade | Points | When |
 |---|---|---|
-| Underlined OK | 5.0 | No comments at all and a 2 or 3 wire |
+| Underlined OK | 5.0 | No comments at all, touching down on the target (150 ft short to 200 ft long) |
 | OK | 4.0 | Small comments only |
 | (OK) Fair | 3.0 | A clear deviation from the middle on in, or a score of 6 or more |
 | B Bolter | 2.5 | Touchdown more than 1,000 ft past the target |

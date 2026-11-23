@@ -119,7 +119,7 @@ test('reads an AHRS packet the same way GRTDecode does', () => {
   assert.ok(Math.abs(a.g * 9.80665 - 9.77) < 0.001);
 });
 
-test('a well-flown approach is a perfect pass on the 3 wire', () => {
+test('a well-flown approach on the target is a perfect pass', () => {
   const f = run({});
   assert.strictEqual(f.passes.length, 1);
   const p = f.passes[0], r = Greenie.gradePass(p);
@@ -128,21 +128,23 @@ test('a well-flown approach is a perfect pass on the 3 wire', () => {
   assert.ok(Math.abs(p.td.along - 300) <= 40, 'touchdown at ' + p.td.along);
   assert.ok(Math.abs(p.td.cross) <= 2);
   assert.strictEqual(p.touchAndGo, false);
-  assert.deepStrictEqual(codes(r), ['3 WIRE']);
+  assert.deepStrictEqual(codes(r), []);
+  assert.strictEqual(r.onTarget, true);
   assert.strictEqual(r.grade, 'OKU');
   assert.strictEqual(r.points, 5);
 });
 
 test('a little fast and a little left is a fair pass with those comments', () => {
   const r = Greenie.gradePass(run({ kias: 76, cross: -20 }).passes[0]);
-  assert.deepStrictEqual(codes(r), ['(LULIC)', '(FIC)', '(LULAR)', '(FAR)', '(LL)', '3 WIRE']);
+  assert.deepStrictEqual(codes(r), ['(LULIC)', '(FIC)', '(LULAR)', '(FAR)', '(LL)']);
   assert.strictEqual(r.grade, 'FAIR');
 });
 
-test('touching down 400 ft past the target is a 4 wire', () => {
+test('touching down 400 ft past the target is a little long', () => {
   const r = Greenie.gradePass(run({ tdAlong: 700 }).passes[0]);
-  assert.strictEqual(r.wire, 4);
-  assert.ok(r.plain.includes('touched down a little long (4 wire)'));
+  assert.strictEqual(r.onTarget, false);
+  assert.ok(codes(r).includes('(LONG)'), codes(r).join(' '));
+  assert.ok(r.plain.includes('touched down a little long'));
 });
 
 test('landing 45 ft left on a 100 ft wide runway is no grade', () => {

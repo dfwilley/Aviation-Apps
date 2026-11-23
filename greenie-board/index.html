@@ -54,7 +54,13 @@ h2{font-size:1.15rem;margin:0 0 8px}
 .sq.red{--c:var(--g-red)} .sq.blue{--c:var(--g-blue)}
 /* A night landing: the box is cut corner to corner, grade color above, black below. */
 .sq.night{background:linear-gradient(135deg,var(--c) 0 50%,#000 50% 100%);color:#fff;text-shadow:0 0 3px #000,0 0 3px #000,0 0 2px #000}
-.pass .sq{border:2px solid var(--line)}
+.dhead{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.dhead .sq{flex:0 0 40px;border:2px solid var(--line);cursor:default}
+.dhead .head{flex:1;min-width:0}
+.dhead .when{font-weight:600}
+.dhead .pts{font-weight:700;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.lso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.95rem;overflow-wrap:anywhere}
+.lso u{text-underline-offset:3px}
 .sq.u span{text-decoration:underline;text-underline-offset:3px}
 .sq:focus-visible,.btn:focus-visible,.seg button:focus-visible,summary:focus-visible{outline:3px solid var(--g-yellow);outline-offset:2px}
 .empty{color:#c9d6e6;font-size:.95rem;margin:4px 0}
@@ -62,16 +68,6 @@ h2{font-size:1.15rem;margin:0 0 8px}
 .legend i{display:inline-block;width:13px;height:13px;margin-right:5px;vertical-align:-2px}
 .notice{border-left:4px solid var(--warn);padding:8px 12px;margin:10px 0;font-size:.93rem;background:var(--card);border-radius:0 8px 8px 0}
 .notice.bad{border-color:var(--bad)}
-.pass{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:10px 0;overflow:hidden}
-.pass summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:12px;align-items:center}
-.pass summary::-webkit-details-marker{display:none}
-.pass .sq{flex:0 0 38px;cursor:inherit}
-.pass .head{flex:1;min-width:0}
-.pass .when{font-weight:600}
-.pass .lso{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem;overflow-wrap:anywhere}
-.pass .lso u{text-underline-offset:3px}
-.pass .pts{font-weight:700;font-variant-numeric:tabular-nums}
-.pass .body{padding:0 12px 12px;border-top:1px solid var(--line)}
 .plain{margin:10px 0;padding-left:20px}
 .plain li{margin:2px 0}
 table{border-collapse:collapse;width:100%;font-size:.9rem;margin:8px 0}
@@ -85,7 +81,7 @@ svg.chart text{fill:var(--muted);font-size:12px}
 .remark{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;min-height:44px}
 label{display:block;font-weight:600;font-size:.9rem;margin:12px 0 4px}
 label small{font-weight:400;color:var(--muted)}
-input[type=number],input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px}
+input[type=number],input[type=text],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px}
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:18px;width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.5)}
 .hint{color:var(--muted);font-size:.87rem;margin:6px 0 0}
@@ -100,51 +96,49 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
   <p>N721NE landings, graded from the HXr's own flight recordings the way a Landing Signal Officer grades a carrier pass.</p>
 </div></header>
 <main>
-  <section class="card" aria-labelledby="boardH">
-    <div class="bar">
-      <h2 id="boardH" style="margin:0">The board</h2>
-      <span class="spacer"></span>
-      <div class="seg" role="group" aria-label="Which landings to show">
-        <button data-scope="all" aria-pressed="true">All airports</button>
-        <button data-scope="KTUS" aria-pressed="false">KTUS only</button>
+  <div id="boardView">
+    <section class="card" aria-labelledby="boardH">
+      <div class="bar">
+        <h2 id="boardH" style="margin:0">The board</h2>
+        <span class="spacer"></span>
+        <div class="seg" role="group" aria-label="Which landings to show">
+          <button data-period="30" aria-pressed="true">Last 30 days</button>
+          <button data-period="all" aria-pressed="false">All</button>
+        </div>
       </div>
-    </div>
-    <div class="board">
-      <div class="who"><span id="pilot">N721NE</span><span id="gpa"></span></div>
-      <div class="squares" id="squares"></div>
-    </div>
-    <div class="stats" id="stats"></div>
-    <div class="legend">
-      <span><i style="background:var(--g-green)"></i>OK (4.0), underlined OK is perfect (5.0)</span>
-      <span><i style="background:var(--g-yellow)"></i>Fair (3.0)</span>
-      <span><i style="background:var(--g-blue)"></i>Bolter, very long (2.5)</span>
-      <span><i style="background:var(--g-brown)"></i>No grade (2.0)</span>
-      <span><i style="background:var(--g-red)"></i>Cut pass (0.0)</span>
-      <span><i style="background:var(--g-green)"></i>Full box: day</span>
-      <span><i style="background:linear-gradient(135deg,var(--g-green) 0 50%,#000 50% 100%)"></i>Cut corner to corner with black: night</span>
-    </div>
-  </section>
-
-  <section class="card" aria-labelledby="addH">
-    <h2 id="addH">Add landings</h2>
-    <p style="margin:0 0 10px">Pick the <b>DEMO-….LOG</b> files from the HXr's USB stick. Pick all the files from a flight at once; the landing is usually in the last one or two. Nothing is uploaded: the files are read on this device only.</p>
+      <div class="board">
+        <div class="who"><span id="pilot">N721NE</span><span id="gpa"></span></div>
+        <div class="squares" id="squares"></div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="legend">
+        <span><i style="background:var(--g-green)"></i>OK (4.0), underlined OK is perfect (5.0)</span>
+        <span><i style="background:var(--g-yellow)"></i>Fair (3.0)</span>
+        <span><i style="background:var(--g-blue)"></i>Bolter, very long (2.5)</span>
+        <span><i style="background:var(--g-brown)"></i>No grade (2.0)</span>
+        <span><i style="background:var(--g-red)"></i>Cut pass (0.0)</span>
+        <span><i style="background:var(--g-green)"></i>Full box: day</span>
+        <span><i style="background:linear-gradient(135deg,var(--g-green) 0 50%,#000 50% 100%)"></i>Cut corner to corner with black: night</span>
+      </div>
+      <p class="hint">Tap a box to open that landing.</p>
+    </section>
     <div class="bar">
-      <button class="btn primary" id="pickBtn">Choose HXr log files</button>
+      <button class="btn primary" id="pickBtn">Add landings from HXr log files</button>
       <input type="file" id="file" multiple hidden>
       <span class="spacer"></span>
       <button class="btn" id="howBtn">How grading works</button>
       <button class="btn" id="setBtn">Settings</button>
     </div>
     <div id="importMsg" role="status" aria-live="polite"></div>
-  </section>
+  </div>
 
-  <section aria-labelledby="passH">
-    <h2 id="passH" style="margin:18px 0 0">Passes</h2>
-    <div id="passes"></div>
-  </section>
+  <div id="detailView" hidden>
+    <div class="bar" style="margin-top:4px"><button class="btn" id="backBtn">&larr; Back to the board</button></div>
+    <section class="card" id="detail"></section>
+  </div>
 </main>
 <footer>
-  <p>Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
+  <p>To add landings, pick all the DEMO-….LOG files from a flight on the HXr's USB stick; they are read on this device and nothing is uploaded. Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
 </footer>
 
 <dialog id="setDlg" aria-labelledby="setH">
@@ -152,6 +146,8 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
   <p class="hint" style="margin-top:0">Changing a target re-grades every landing on the board.</p>
   <label for="sPilot">Name on the board</label>
   <input id="sPilot" type="text" maxlength="24">
+  <label for="sScope">Airports on the board</label>
+  <select id="sScope"><option value="all">All airports</option><option value="KTUS">KTUS only</option></select>
   <label for="sKias">Target approach speed <small>knots indicated</small></label>
   <input id="sKias" type="number" inputmode="decimal" min="40" max="120" step="1">
   <label for="sGp">Target glidepath <small>degrees</small></label>
@@ -187,12 +183,12 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
     <li><b>Glidepath</b> (H high, LO low): your angle to the target touchdown point against the target glidepath. Off by more than 0.5°, 1° and 2°.</li>
     <li><b>Lineup</b> (LUL left, LUR right): feet from the runway centerline. 60 ft at the start, 40 in the middle, 25 in close, 20 at the threshold; double that is a full comment.</li>
     <li><b>Speed</b> (F fast, SLO slow): in close and at the threshold only. Fast by 5, 10, 15 knots; slow by 4, 7, 10.</li>
-    <li><b>Touchdown</b>: how far past the threshold (the "wire"), LL or LR for left or right of the centerline, LLWD or LRWD for a wing down, and HARD from the G reading.</li>
+    <li><b>Touchdown</b>: SHORT or LONG against your target point, LL or LR for left or right of the centerline, LLWD or LRWD for a wing down, and HARD from the G reading.</li>
     <li><b>The groove</b>: NESA is less than 12 seconds lined up (not enough straightaway). LIG is more than 35 seconds (long in the groove).</li>
   </ul>
-  <p><b>Reading the comment.</b> (H) in brackets is a little. H alone is a clear deviation. <u>H</u> underlined is way off. So "(HX) FIC 3 WIRE" reads: a little high at the start, fast in close, touched down on the target.</p>
-  <p><b>Wires.</b> 1 wire is more than 150 ft short of your target point. 2 and 3 wires are the target area (150 ft short to 200 ft long). 4 wire is up to 500 ft long. More than 1,000 ft long is a bolter.</p>
-  <p><b>The grade.</b> Small comments add up. A clear deviation in close, at the threshold or at touchdown makes the pass Fair. Anything way off close in, or touching down before the threshold, is No grade. A touchdown of 2 G or more is a Cut pass. No comments at all and a 2 or 3 wire earns the underlined OK.</p>
+  <p><b>Reading the comment.</b> (H) in brackets is a little. H alone is a clear deviation. <u>H</u> underlined is way off. So "(HX) FIC (LONG)" reads: a little high at the start, fast in close, touched down a little long.</p>
+  <p><b>Touchdown point.</b> From 150 ft short of your target to 200 ft past it is on target. Shorter than that is (SHORT). Up to 500 ft long is (LONG), up to 1,000 ft is LONG, and more than 1,000 ft long is a bolter.</p>
+  <p><b>The grade.</b> Small comments add up. A clear deviation in close, at the threshold or at touchdown makes the pass Fair. Anything way off close in, or touching down before the threshold, is No grade. A touchdown of 2 G or more is a Cut pass. No comments at all, with the touchdown on target, earns the underlined OK.</p>
   <p><b>Day and night.</b> A day landing is a full box in the grade color. A night landing is a box cut corner to corner, with the grade color above and black below. Night here is the FAA meaning: the sun more than 6° below the horizon at the airport (after evening civil twilight, before morning civil twilight). Ready rooms each marked night their own way; this is one of the ways.</p>
   <p><b>Limits.</b> The published runway positions are good to about 20 ft, so do not read much into a few feet of lineup. The HXr smooths its G reading, so a firm landing may not show. If a recording stops before the wheels touch, that landing cannot be graded and the app says so.</p>
   <div class="bar" style="justify-content:flex-end"><button class="btn primary" id="howClose">Close</button></div>
@@ -212,7 +208,7 @@ function load(){
   var s=null;
   try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   if(!s||typeof s!=='object') s={};
-  s.settings=Object.assign({pilot:'N721NE',scope:'all'},Greenie.DEFAULTS,s.settings||{});
+  s.settings=Object.assign({pilot:'N721NE',scope:'all',period:'30'},Greenie.DEFAULTS,s.settings||{});
   if(!Array.isArray(s.passes)) s.passes=[];
   return s;
 }
@@ -230,6 +226,7 @@ function side(n){ n=Math.round(n); return n===0?'on centerline':fmt(Math.abs(n))
 function shown(){
   var list=state.passes.slice().sort(function(a,b){return a.t-b.t;});
   if(state.settings.scope==='KTUS') list=list.filter(function(p){return p.airport==='KTUS';});
+  if(state.settings.period!=='all'){ var cut=Date.now()/1000-30*86400; list=list.filter(function(p){return p.t>=cut;}); }
   return list;
 }
 
@@ -239,22 +236,32 @@ function square(r,tag,night){
   return b;
 }
 
+function routeId(){ var m=/^#landing=(\d+)$/.exec(location.hash); return m?+m[1]:null; }
 function render(){
+  var id=routeId(), p=id===null?null:state.passes.find(function(x){ return Math.round(x.t)===id; });
+  $('boardView').hidden=!!p; $('detailView').hidden=!p;
+  if(p) renderDetail(p); else renderBoard();
+}
+
+function renderBoard(){
   var st=state.settings;
   $('pilot').textContent=st.pilot||'N721NE';
-  document.querySelectorAll('[data-scope]').forEach(function(b){ b.setAttribute('aria-pressed',String(b.dataset.scope===st.scope)); });
+  document.querySelectorAll('[data-period]').forEach(function(b){ b.setAttribute('aria-pressed',String(b.dataset.period===(st.period==='all'?'all':'30'))); });
   var list=shown();
   var graded=list.map(function(p){ return {p:p,r:Greenie.gradePass(p,st)}; });
   var sq=$('squares'); sq.textContent=''; sq.classList.toggle('none',!graded.length);
-  if(!graded.length) sq.appendChild(el('p','empty',state.passes.length?'No KTUS landings on the board yet.':'No landings yet. Add HXr log files below to post your first pass.'));
+  if(!graded.length){
+    var older=state.passes.length, msg;
+    if(!older) msg='No landings yet. Add HXr log files below to post your first pass.';
+    else if(st.period!=='all') msg='No landings in the last 30 days. Press All to see the '+older+(older===1?' landing':' landings')+' on file.';
+    else msg='No KTUS landings on the board yet.';
+    sq.appendChild(el('p','empty',msg));
+  }
   graded.forEach(function(g){
     var b=square(g.r,'button',g.p.night);
     b.title=when(g.p.t)+' '+g.p.airport+' '+g.p.runway+(g.p.night?', night':', day')+': '+g.r.name;
     b.setAttribute('aria-label',b.title);
-    b.addEventListener('click',function(){
-      var d=document.getElementById('pass-'+Math.round(g.p.t));
-      if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'start'}); }
-    });
+    b.addEventListener('click',function(){ location.hash='#landing='+Math.round(g.p.t); });
     sq.appendChild(b);
   });
   var n=graded.length, sum=0, counts={};
@@ -268,13 +275,27 @@ function render(){
     addStat(fmt(100*(counts.green||0)/n)+'%','boarding rate (OK passes)');
     var nn=graded.filter(function(g){return g.p.night;}).length;
     addStat((n-nn)+' / '+nn,'day / night');
-    var last=graded.slice(-10), ls=0; last.forEach(function(g){ls+=g.r.points;});
-    if(n>10) addStat(fmt(ls/last.length,2),'last 10 average');
   }
-  var box=$('passes'); box.textContent='';
-  if(!graded.length) box.appendChild(el('p','hint','Each landing will appear here with the LSO comment, the numbers behind it and a picture of the approach.'));
-  graded.slice().reverse().forEach(function(g){ box.appendChild(passCard(g.p,g.r)); });
 }
+
+// The page for one landing.
+function renderDetail(p){
+  var r=Greenie.gradePass(p,state.settings), box=$('detail');
+  box.textContent='';
+  var h=el('div','dhead');
+  h.appendChild(square(r,'div',p.night));
+  var head=el('div','head');
+  head.appendChild(el('div','when',when(p.t)+' \u00b7 '+p.airport+' runway '+p.runway+(p.night?' \u00b7 night':' \u00b7 day')+(p.touchAndGo?' \u00b7 touch and go':'')));
+  head.appendChild(lsoLine(r));
+  h.appendChild(head);
+  h.appendChild(el('div','pts',fmt(r.points,1)));
+  box.appendChild(h);
+  box.appendChild(passBody(p,r));
+  var cw=box.querySelector('.chartwrap'); if(cw) cw.scrollLeft=cw.scrollWidth;
+  window.scrollTo(0,0);
+}
+function toBoard(){ if(location.hash) history.pushState(null,'',location.pathname+location.search); render(); }
+window.addEventListener('popstate',render);
 
 function lsoLine(r){
   var span=el('span','lso');
@@ -287,25 +308,8 @@ function lsoLine(r){
   return span;
 }
 
-function passCard(p,r){
-  var d=el('details','pass'); d.id='pass-'+Math.round(p.t);
-  var s=el('summary');
-  s.appendChild(square(r,'div',p.night));
-  var head=el('div','head');
-  head.appendChild(el('div','when',when(p.t)+' · '+p.airport+' runway '+p.runway+(p.night?' \u00b7 night':'')+(p.touchAndGo?' · touch and go':'')));
-  head.appendChild(lsoLine(r));
-  s.appendChild(head);
-  s.appendChild(el('div','pts',fmt(r.points,1)));
-  d.appendChild(s);
-  var built=false;
-  d.addEventListener('toggle',function(){
-    if(d.open&&!built){ built=true; d.appendChild(passBody(p,r)); var cw=d.querySelector('.chartwrap'); if(cw) cw.scrollLeft=cw.scrollWidth; }
-  });
-  return d;
-}
-
 function passBody(p,r){
-  var b=el('div','body');
+  var b=el('div');
   b.appendChild(el('p','',r.name+' ('+fmt(r.points,1)+').'));
   if(r.plain.length){
     var ul=el('ul','plain');
@@ -338,7 +342,7 @@ function passBody(p,r){
   var bar=el('div','bar'); bar.style.marginTop='10px'; bar.style.justifyContent='flex-end';
   var del=el('button','btn small danger','Remove this landing');
   del.addEventListener('click',function(){
-    if(del.dataset.armed){ state.passes=state.passes.filter(function(x){return x!==p;}); save(); render(); }
+    if(del.dataset.armed){ state.passes=state.passes.filter(function(x){return x!==p;}); save(); toBoard(); }
     else { del.dataset.armed='1'; del.textContent='Tap again to remove'; setTimeout(function(){ delete del.dataset.armed; del.textContent='Remove this landing'; },4000); }
   });
   bar.appendChild(del); b.appendChild(bar);
@@ -430,6 +434,8 @@ async function addFiles(files){
     if(added){ save(); render(); }
     var parts=[];
     if(added) parts.push(added+(added===1?' landing':' landings')+' added to the board.');
+    var cut=Date.now()/1000-30*86400;
+    if(added&&state.settings.period!=='all'&&found.passes.some(function(p){ return p.t<cut; })) parts.push('Some are more than 30 days old: press All to see them.');
     if(dup) parts.push(dup+(dup===1?' landing was':' landings were')+' already on the board.');
     if(!added&&!dup) parts.push('No touchdown on a known runway was found in '+(files.length===1?'that file':'those files')+'.');
     note(parts.join(' '));
@@ -445,20 +451,23 @@ async function addFiles(files){
 $('pickBtn').addEventListener('click',function(){ $('file').click(); });
 $('file').addEventListener('change',function(){ var fs=Array.prototype.slice.call(this.files); this.value=''; addFiles(fs); });
 
-document.querySelectorAll('[data-scope]').forEach(function(b){
-  b.addEventListener('click',function(){ state.settings.scope=b.dataset.scope; save(); render(); });
+document.querySelectorAll('[data-period]').forEach(function(b){
+  b.addEventListener('click',function(){ state.settings.period=b.dataset.period; save(); render(); });
 });
+$('backBtn').addEventListener('click',toBoard);
+window.addEventListener('hashchange',render);
 
 // ---------- settings ----------
 $('setBtn').addEventListener('click',function(){
   var s=state.settings;
-  $('sPilot').value=s.pilot; $('sKias').value=s.approachKias; $('sGp').value=s.glidepathDeg; $('sAim').value=s.aimFt;
+  $('sPilot').value=s.pilot; $('sScope').value=s.scope==='KTUS'?'KTUS':'all'; $('sKias').value=s.approachKias; $('sGp').value=s.glidepathDeg; $('sAim').value=s.aimFt;
   $('setDlg').showModal();
 });
 $('setCancel').addEventListener('click',function(){ $('setDlg').close(); });
 $('setSave').addEventListener('click',function(){
   var s=state.settings, num=function(id,lo,hi,def){ var v=parseFloat($(id).value); return isFinite(v)?Math.min(hi,Math.max(lo,v)):def; };
   s.pilot=$('sPilot').value.trim()||'N721NE';
+  s.scope=$('sScope').value;
   s.approachKias=num('sKias',40,120,Greenie.DEFAULTS.approachKias);
   s.glidepathDeg=num('sGp',2,8,Greenie.DEFAULTS.glidepathDeg);
   s.aimFt=num('sAim',0,3000,Greenie.DEFAULTS.aimFt);
