@@ -47,14 +47,19 @@ h2{font-size:1.15rem;margin:0 0 8px}
 .board .who{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
 .board .who span:last-child{font-variant-numeric:tabular-nums}
 .squares{display:flex;flex-wrap:wrap;gap:5px}
-.sq{width:38px;height:38px;border-radius:5px;border:0;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;padding:0}
-.sq.green{background:var(--g-green)} .sq.yellow{background:var(--g-yellow);color:#2a2000} .sq.brown{background:var(--g-brown)}
-.sq.red{background:var(--g-red)} .sq.blue{background:var(--g-blue)}
+.squares{gap:0;border-top:2px solid #e9eef4;border-left:2px solid #e9eef4;width:fit-content;max-width:100%}
+.squares:empty,.squares.none{border:0}
+.sq{width:40px;height:40px;border-radius:0;border:0;border-right:2px solid #e9eef4;border-bottom:2px solid #e9eef4;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;background:var(--c)}
+.sq.green{--c:var(--g-green)} .sq.yellow{--c:var(--g-yellow);color:#2a2000} .sq.brown{--c:var(--g-brown)}
+.sq.red{--c:var(--g-red)} .sq.blue{--c:var(--g-blue)}
+/* A night landing: the box is cut corner to corner, grade color above, black below. */
+.sq.night{background:linear-gradient(135deg,var(--c) 0 50%,#000 50% 100%);color:#fff;text-shadow:0 0 3px #000,0 0 3px #000,0 0 2px #000}
+.pass .sq{border:2px solid var(--line)}
 .sq.u span{text-decoration:underline;text-underline-offset:3px}
 .sq:focus-visible,.btn:focus-visible,.seg button:focus-visible,summary:focus-visible{outline:3px solid var(--g-yellow);outline-offset:2px}
 .empty{color:#c9d6e6;font-size:.95rem;margin:4px 0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted);margin-top:10px}
-.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend i{display:inline-block;width:13px;height:13px;margin-right:5px;vertical-align:-2px}
 .notice{border-left:4px solid var(--warn);padding:8px 12px;margin:10px 0;font-size:.93rem;background:var(--card);border-radius:0 8px 8px 0}
 .notice.bad{border-color:var(--bad)}
 .pass{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:10px 0;overflow:hidden}
@@ -115,6 +120,8 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
       <span><i style="background:var(--g-blue)"></i>Bolter, very long (2.5)</span>
       <span><i style="background:var(--g-brown)"></i>No grade (2.0)</span>
       <span><i style="background:var(--g-red)"></i>Cut pass (0.0)</span>
+      <span><i style="background:var(--g-green)"></i>Full box: day</span>
+      <span><i style="background:linear-gradient(135deg,var(--g-green) 0 50%,#000 50% 100%)"></i>Cut corner to corner with black: night</span>
     </div>
   </section>
 
@@ -186,6 +193,7 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
   <p><b>Reading the comment.</b> (H) in brackets is a little. H alone is a clear deviation. <u>H</u> underlined is way off. So "(HX) FIC 3 WIRE" reads: a little high at the start, fast in close, touched down on the target.</p>
   <p><b>Wires.</b> 1 wire is more than 150 ft short of your target point. 2 and 3 wires are the target area (150 ft short to 200 ft long). 4 wire is up to 500 ft long. More than 1,000 ft long is a bolter.</p>
   <p><b>The grade.</b> Small comments add up. A clear deviation in close, at the threshold or at touchdown makes the pass Fair. Anything way off close in, or touching down before the threshold, is No grade. A touchdown of 2 G or more is a Cut pass. No comments at all and a 2 or 3 wire earns the underlined OK.</p>
+  <p><b>Day and night.</b> A day landing is a full box in the grade color. A night landing is a box cut corner to corner, with the grade color above and black below. Night here is the FAA meaning: the sun more than 6° below the horizon at the airport (after evening civil twilight, before morning civil twilight). Ready rooms each marked night their own way; this is one of the ways.</p>
   <p><b>Limits.</b> The published runway positions are good to about 20 ft, so do not read much into a few feet of lineup. The HXr smooths its G reading, so a firm landing may not show. If a recording stops before the wheels touch, that landing cannot be graded and the app says so.</p>
   <div class="bar" style="justify-content:flex-end"><button class="btn primary" id="howClose">Close</button></div>
 </dialog>
@@ -225,8 +233,8 @@ function shown(){
   return list;
 }
 
-function square(r,tag){
-  var b=el(tag||'button','sq '+r.color+(r.underline?' u':''));
+function square(r,tag,night){
+  var b=el(tag||'button','sq '+r.color+(r.underline?' u':'')+(night?' night':''));
   b.appendChild(el('span','',r.symbol));
   return b;
 }
@@ -237,11 +245,11 @@ function render(){
   document.querySelectorAll('[data-scope]').forEach(function(b){ b.setAttribute('aria-pressed',String(b.dataset.scope===st.scope)); });
   var list=shown();
   var graded=list.map(function(p){ return {p:p,r:Greenie.gradePass(p,st)}; });
-  var sq=$('squares'); sq.textContent='';
+  var sq=$('squares'); sq.textContent=''; sq.classList.toggle('none',!graded.length);
   if(!graded.length) sq.appendChild(el('p','empty',state.passes.length?'No KTUS landings on the board yet.':'No landings yet. Add HXr log files below to post your first pass.'));
   graded.forEach(function(g){
-    var b=square(g.r);
-    b.title=when(g.p.t)+' '+g.p.airport+' '+g.p.runway+': '+g.r.name;
+    var b=square(g.r,'button',g.p.night);
+    b.title=when(g.p.t)+' '+g.p.airport+' '+g.p.runway+(g.p.night?', night':', day')+': '+g.r.name;
     b.setAttribute('aria-label',b.title);
     b.addEventListener('click',function(){
       var d=document.getElementById('pass-'+Math.round(g.p.t));
@@ -258,6 +266,8 @@ function render(){
     addStat(String(n),n===1?'landing':'landings');
     addStat(fmt(sum/n,2),'average grade');
     addStat(fmt(100*(counts.green||0)/n)+'%','boarding rate (OK passes)');
+    var nn=graded.filter(function(g){return g.p.night;}).length;
+    addStat((n-nn)+' / '+nn,'day / night');
     var last=graded.slice(-10), ls=0; last.forEach(function(g){ls+=g.r.points;});
     if(n>10) addStat(fmt(ls/last.length,2),'last 10 average');
   }
@@ -280,9 +290,9 @@ function lsoLine(r){
 function passCard(p,r){
   var d=el('details','pass'); d.id='pass-'+Math.round(p.t);
   var s=el('summary');
-  s.appendChild(square(r,'div'));
+  s.appendChild(square(r,'div',p.night));
   var head=el('div','head');
-  head.appendChild(el('div','when',when(p.t)+' · '+p.airport+' runway '+p.runway+(p.touchAndGo?' · touch and go':'')));
+  head.appendChild(el('div','when',when(p.t)+' · '+p.airport+' runway '+p.runway+(p.night?' \u00b7 night':'')+(p.touchAndGo?' · touch and go':'')));
   head.appendChild(lsoLine(r));
   s.appendChild(head);
   s.appendChild(el('div','pts',fmt(r.points,1)));
@@ -474,7 +484,7 @@ $('restoreFile').addEventListener('change',function(){
         if(state.passes.some(function(q){ return Math.abs(q.t-p.t)<20; })) return;
         state.passes.push(p); added++;
       });
-      save(); render(); $('setDlg').close(); $('importMsg').textContent='';
+      save(); render(); fillNight(); $('setDlg').close(); $('importMsg').textContent='';
       note(added+(added===1?' landing':' landings')+' added from the backup file.');
     }catch(e){ $('setDlg').close(); $('importMsg').textContent=''; note('That file is not a Greenie Board backup.',true); }
   };
@@ -483,7 +493,20 @@ $('restoreFile').addEventListener('change',function(){
 $('howBtn').addEventListener('click',function(){ $('howDlg').showModal(); });
 $('howClose').addEventListener('click',function(){ $('howDlg').close(); });
 
+// Landings saved before day and night were tracked: work it out from where the airport is.
+function fillNight(){
+  var need=state.passes.filter(function(p){ return typeof p.night!=='boolean'; });
+  if(!need.length) return;
+  loadRunways().then(function(rows){
+    need.forEach(function(p){
+      var row=rows.find(function(r){ return r[0]===p.airport; });
+      if(row) p.night=Greenie.isNight(p.t,row[3],row[4]);
+    });
+    save(); render();
+  }).catch(function(){});
+}
 render();
+fillNight();
 })();
 </script>
 </body>

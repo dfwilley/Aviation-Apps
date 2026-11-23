@@ -66,6 +66,12 @@ Each comment scores 1, 3 or 8 points (a little, clearly, way off), multiplied by
 | No grade | 2.0 | Way off in close, at the ramp or at touchdown; touchdown before the threshold; or a score of 14 or more |
 | C Cut pass | 0.0 | Touchdown of 2.0 G or more |
 
+## The board
+
+Each landing is a box in the grade color with the grade symbol on it, in date order. A day landing is a full box. A night landing is a box cut corner to corner: grade color above, black below. Night is the FAA meaning (the sun more than 6 degrees below the horizon at the airport), worked out from the GPS time and the airport's position.
+
+Real greenie boards were not standard. Accounts from squadron pilots online describe each ready room marking night its own way: a black circle (VF-33), a box cut diagonally and filled black, a black corner, or a D/N in the date column. The colors (green OK, yellow fair, brown no grade, red cut pass) are the ones those accounts agree on.
+
 ## Limits
 
 - Runway positions come from the OurAirports public-domain data and are good to about 20 ft. Both 2024 test landings show 10 to 13 ft right of centerline all the way down the rollout, which may be the data and not the pilot.

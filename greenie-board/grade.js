@@ -44,6 +44,24 @@
     CUT: { symbol: 'C', points: 0.0, name: 'Cut pass (unsafe)', color: 'red' }
   };
 
+  // Height of the sun above the horizon in degrees (NOAA's short method, good to a fraction of a degree).
+  function sunElevation(t, lat, lon) {
+    var d = t / 86400 - 10957.5;                         // days since noon UTC, January 1, 2000
+    var L = (280.46 + 0.9856474 * d) % 360, g = ((357.528 + 0.9856003 * d) % 360) * RAD;
+    var lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD;
+    var eps = (23.439 - 0.0000004 * d) * RAD;
+    var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
+    var dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+    var gmst = (18.697374558 + 24.06570982441908 * d) % 24;
+    var ha = (gmst * 15 + lon) * RAD - ra;
+    return Math.asin(Math.sin(lat * RAD) * Math.sin(dec) + Math.cos(lat * RAD) * Math.cos(dec) * Math.cos(ha)) / RAD;
+  }
+  // Night the way the FAA defines it: between the end of evening civil twilight and the
+  // start of morning civil twilight, which is when the sun is more than 6 degrees down.
+  function isNight(t, lat, lon) {
+    return sunElevation(t, lat, lon) < -6;
+  }
+
   function angDiff(a, b) {
     var d = ((a - b) % 360 + 540) % 360 - 180;
     return d;
@@ -177,6 +195,7 @@
     var tp = relPos(end, td.lat, td.lon);
     return {
       t: td.t, airport: end.airport, runway: end.name, width: end.width,
+      night: isNight(td.t, td.lat, td.lon),
       td: { along: Math.round(tp.along), cross: Math.round(tp.cross), ias: +td.ias.toFixed(1), gs: +td.gs.toFixed(1),
         roll: +td.roll.toFixed(1), pitch: +td.pitch.toFixed(1), g: +g.toFixed(2) },
       rollout: rollSecs >= 2 ? { maxCross: Math.round(rollMax), secs: Math.round(rollSecs) } : null,
@@ -326,6 +345,6 @@
   return {
     DEFAULTS: DEFAULTS, GRADES: GRADES, PHASES: PHASES,
     findLandings: findLandings, gradePass: gradePass, commentText: commentText,
-    runwayEnds: runwayEnds, relPos: relPos, angDiff: angDiff
+    runwayEnds: runwayEnds, relPos: relPos, angDiff: angDiff, sunElevation: sunElevation, isNight: isNight
   };
 });

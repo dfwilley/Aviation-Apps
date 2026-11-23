@@ -186,4 +186,19 @@ test('grade rules: hard, short, bolter and settings', () => {
   assert.ok(codes(Greenie.gradePass(base, { approachKias: 58 })).includes('FIC'));
 });
 
+test('day and night at Tucson', () => {
+  const tus = [32.116, -110.941];
+  // September 28, 2024: 9:39 in the morning local (the real runway 12 landing) is day.
+  assert.strictEqual(Greenie.isNight(Date.UTC(2024, 8, 28, 16, 39) / 1000, tus[0], tus[1]), false);
+  // Sunset that day was about 6:13 pm local (01:13 UTC). Ten minutes later is twilight, still day.
+  assert.strictEqual(Greenie.isNight(Date.UTC(2024, 8, 29, 1, 23) / 1000, tus[0], tus[1]), false);
+  // An hour after sunset is night; so is 4 in the morning.
+  assert.strictEqual(Greenie.isNight(Date.UTC(2024, 8, 29, 2, 13) / 1000, tus[0], tus[1]), true);
+  assert.strictEqual(Greenie.isNight(Date.UTC(2024, 8, 28, 11, 0) / 1000, tus[0], tus[1]), true);
+  // The sun is on the horizon (within a degree) at the published sunset time.
+  assert.ok(Math.abs(Greenie.sunElevation(Date.UTC(2024, 8, 29, 1, 13) / 1000, tus[0], tus[1])) < 1.2);
+  // Passes found in a recording carry the flag (the made-up flight is at 9 am local).
+  assert.strictEqual(run({}).passes[0].night, false);
+});
+
 console.log(passed + ' passed');
