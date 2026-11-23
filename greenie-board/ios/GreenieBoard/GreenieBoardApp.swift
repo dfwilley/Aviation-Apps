@@ -91,7 +91,7 @@ struct BoardWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if let url = navigationAction.url, let scheme = url.scheme?.lowercased(),
+            if let url = navigationAction.request.url, let scheme = url.scheme?.lowercased(),
                ["http", "https", "mailto", "tel"].contains(scheme) {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
@@ -103,7 +103,7 @@ struct BoardWebView: UIViewRepresentable {
         // A link that asks for a new window opens in Safari too.
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                      for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            if let url = navigationAction.url { UIApplication.shared.open(url) }
+            if let url = navigationAction.request.url { UIApplication.shared.open(url) }
             return nil
         }
 
