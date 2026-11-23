@@ -1,0 +1,25 @@
+name: Greenie Board - tests
+
+# Runs the log reader and grading checks on every branch.
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'greenie-board/**'
+      - '.github/workflows/greenie-board-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run tests
+        working-directory: greenie-board
+        run: node test.js

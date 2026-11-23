@@ -1,0 +1,86 @@
+# KTUS Greenie Board
+
+Real landings in N721NE, graded the way a Landing Signal Officer (LSO) grades a carrier pass, and posted as colored squares on a "greenie board".
+
+Open it at https://dfwilley.github.io/Aviation-Apps/greenie-board/
+
+## How to use it
+
+1. After a flight, copy the `DEMO-....LOG` files from the HXr's USB stick to the computer (or to Dropbox for the phone).
+2. Open the page, press **Choose HXr log files**, and pick all the files from the flight. The landing is usually in the last one or two.
+3. Each touchdown on a known runway is added to the board with a grade, the LSO comment, the same thing in plain words, the numbers, and a picture of the approach.
+
+The files are read in the browser. Nothing is uploaded. The board is kept in that browser only; **Settings** has buttons to save and load a backup file, which is also how to move the board to another device.
+
+## What it reads
+
+The HXr recording is a raw copy of what arrived on its serial ports. Each record is a stream number (1 byte), a time in milliseconds since power-on (4 bytes), a length (4 bytes) and the data. The app uses two kinds of data:
+
+| Data | Rate | Used for |
+|---|---|---|
+| GPS `$GPRMC` text sentences | 4 per second | Position, ground speed, track, date and time |
+| AHRS high-rate packets (`7F FF FE`, 28 bytes) | about 15 per second | Pressure altitude, indicated airspeed, pitch, bank, G |
+
+The AHRS packet layout was checked against the output of GRTDecode 2.22 for the same recording; one real packet is in `test.js`.
+
+## How a landing is found
+
+A touchdown is the moment the descent stops (after at least 25 ft of descent in the previous 10 seconds) while the airplane is over a runway, lined up within 25 degrees, between 35 and 95 knots, and it does not climb in the next 2 seconds. Height is pressure altitude compared with the altitude at touchdown, so the altimeter setting does not matter.
+
+If a recording stops while the airplane is still coming down over a runway, the app reports that approach as cut off and does not grade it. (One of the three 2024 test landings was like this: the file ends about 8 ft above the runway.)
+
+## How it is graded
+
+The targets are in **Settings**. They are debrief settings chosen by Claude as starting points, not numbers from the airplane's documents: 70 knots indicated, a 3.0 degree glidepath, and a touchdown point 300 ft past the threshold.
+
+| Code | Where | Distance before the threshold |
+|---|---|---|
+| X | At the start | 4,500 to 3,000 ft |
+| IM | In the middle | 3,000 to 1,500 ft |
+| IC | In close | 1,500 to 300 ft |
+| AR | At the ramp | Crossing the threshold |
+
+| Check | Codes | A little / clearly / way off |
+|---|---|---|
+| Glidepath angle to the target point | H, LO | 0.5 / 1.0 / 2.0 degrees |
+| Lineup, feet from centerline | LUL, LUR | X 60/120/240, IM 40/80/160, IC 25/50/100, AR 20/35/60 |
+| Speed (in close and at the ramp only) | F, SLO | fast 5/10/15 kt, slow 4/7/10 kt |
+| Height crossing the threshold | H, LO | high by 15/30/60 ft; low is under 10 ft, clearly low under 5 ft |
+| Touchdown left or right | LL, LR | 15 / 30 / 50 ft |
+| Wing down at touchdown | LLWD, LRWD | 4 / 8 degrees |
+| Touchdown G | HARD | 1.3 / 1.6 / 2.0 |
+| Time lined up | NESA, LIG | under 12 seconds, over 35 seconds |
+
+Lineup limits from in close onward are scaled for runway width (150 ft is full scale, never less than half).
+
+Wires, measured from the target point: 1 wire is more than 150 ft short, 2 wire is up to 150 ft short, 3 wire is up to 200 ft long, 4 wire is up to 500 ft long. More than 1,000 ft long is a bolter.
+
+Each comment scores 1, 3 or 8 points (a little, clearly, way off), multiplied by 0.5 at the start, 1 in the middle, 1.5 in close and 2 at the ramp and touchdown.
+
+| Grade | Points | When |
+|---|---|---|
+| Underlined OK | 5.0 | No comments at all and a 2 or 3 wire |
+| OK | 4.0 | Small comments only |
+| (OK) Fair | 3.0 | A clear deviation from the middle on in, or a score of 6 or more |
+| B Bolter | 2.5 | Touchdown more than 1,000 ft past the target |
+| No grade | 2.0 | Way off in close, at the ramp or at touchdown; touchdown before the threshold; or a score of 14 or more |
+| C Cut pass | 0.0 | Touchdown of 2.0 G or more |
+
+## Limits
+
+- Runway positions come from the OurAirports public-domain data and are good to about 20 ft. Both 2024 test landings show 10 to 13 ft right of centerline all the way down the rollout, which may be the data and not the pilot.
+- The HXr smooths its G reading (the test landings peak at 1.07 G), so a firm landing may not show as HARD.
+- Only runways in `runways.json` are graded: about 6,900 open US runways of 1,500 ft or more that have published coordinates for both ends.
+- A low go-around that levels off within a few feet of the runway for 2 seconds would be counted as a touchdown.
+
+## Files
+
+| File | What it is |
+|---|---|
+| `index.html` | The page |
+| `grt-log.js` | Reads the HXr recording |
+| `grade.js` | Finds landings and grades them |
+| `runways.json` | Runway list, built by `tools/make_runways.py` from https://ourairports.com/data/ (downloaded November 23, 2026) |
+| `test.js` | Tests: `node test.js` |
+
+The owner's real recordings are personal flight data and are not in this repository.

@@ -23,6 +23,7 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 | `electrical-system/` | Native iPhone app (SwiftUI), "N721NE Elec". Live diagram of the electrical system with power paths and battery life. Bundle ID `com.dfwilley.electricalsystem` | XcodeGen from `project.yml` |
 | `fuel-planner/` | Web app, plain HTML and JavaScript, no build step | GitHub Pages |
 | `N721NE-To-Do-List/` | Web app, one HTML file, no build step. A checklist of flight and ground test points; each browser keeps its own copy of the list | GitHub Pages |
+| `greenie-board/` | Web app, "KTUS Greenie Board", plain HTML and JavaScript, no build step. Reads the GRT HXr's raw `DEMO-....LOG` recordings in the browser, finds each touchdown and grades it LSO-style. Each browser keeps its own board | GitHub Pages; `node greenie-board/test.js` runs in `greenie-board-test.yml` |
 | `hangar-board/` | Arduino firmware for an ESP32 e-paper status board, plus a web installer page | Arduino IDE; compiled `.bin` files are checked in under `firmware/` |
 
 `index.html` at the top is the GitHub Pages landing page (https://dfwilley.github.io/Aviation-Apps/).
@@ -45,6 +46,7 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 
 ## Tests and checks
 
+- Greenie Board: `node greenie-board/test.js` (runs anywhere, no Mac needed). It builds made-up recordings and checks the grades. The owner's real log files are personal flight data: test against them locally, never commit them.
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
 - Weight & Balance: `WeightAndBalanceTests/` checks results against the web app's numbers. `web/wb-core.js` and `WBModel.swift` hold the same math and model defaults; change both together and run `node web/test.js`. Model defaults come from Van's weight and balance quick-reference sheets (sources listed in `weight-and-balance/README.md`).
 - Cruise Perf: `cruise-performance/ios/ModelCheck/` compares the Swift math with `expected.json`, which was produced by the web app's own code.
