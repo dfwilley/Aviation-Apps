@@ -298,10 +298,32 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     try{ localStorage.setItem(SEEDS_KEY, JSON.stringify(SEED.map(function(p){return p.id;}))); }catch(e){}
     if(added){ save(); setStatus("Added "+added+" new items."); }
   }
+  // Items finished outside the page (recorded with Claude). Each is checked off
+  // once per browser; if you reopen it afterward it stays open.
+  var DONE_KEY = "n721ne-todo-done-updates";
+  var DONE_UPDATES = [
+    {id:"rec-poh-engine", done:"2026-11-23",
+     result:"POH Rev 1.11: section 1.1 engine model changed to Lycoming YIO-390-EXP10 (data plate). No logbook entry needed; no due dates changed."}
+  ];
+  function applyDoneUpdates(){
+    var applied=[];
+    try{ applied=JSON.parse(localStorage.getItem(DONE_KEY)||"[]"); }catch(e){}
+    if(!Array.isArray(applied)) applied=[];
+    var changed=0;
+    DONE_UPDATES.forEach(function(u){
+      if(applied.indexOf(u.id)>=0) return;
+      applied.push(u.id);
+      var p=find(u.id);
+      if(p && p.status!=="done"){ p.status="done"; p.done=u.done; p.result=u.result; changed++; }
+    });
+    try{ localStorage.setItem(DONE_KEY, JSON.stringify(applied)); }catch(e){}
+    if(changed){ save(); setStatus("Checked off "+changed+" item"+(changed>1?"s":"")+" finished with Claude."); }
+  }
   function load(){
-    try{ var s = localStorage.getItem(KEY); if(s){ items = JSON.parse(s); mergeNewSeeds(); return; } }catch(e){}
+    try{ var s = localStorage.getItem(KEY); if(s){ items = JSON.parse(s); mergeNewSeeds(); applyDoneUpdates(); return; } }catch(e){}
     items = JSON.parse(JSON.stringify(SEED));
     try{ localStorage.setItem(SEEDS_KEY, JSON.stringify(SEED.map(function(p){return p.id;}))); }catch(e){}
+    applyDoneUpdates();
   }
   function save(){
     try{ localStorage.setItem(KEY, JSON.stringify(items)); }catch(e){ setStatus("Couldn't save in this browser. Use Export to keep a copy."); }
