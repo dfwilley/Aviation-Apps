@@ -62,7 +62,6 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 - Hangar Log was submitted to the App Store once and rejected (see `hangar-voice-log/INSTALL.md`). The owner chose TestFlight and Sideloadly instead. Don't resubmit or change App Store settings unless asked.
 - Hangar Board: after editing anything in `hangar-board/HangarBoard/web/`, run `python3 tools/embed.py` to regenerate `web_assets.h`. There is no cloud build for the firmware; new `.bin` files have to be compiled in the Arduino IDE and checked in.
 - Fuel Planner's prices are a fixed snapshot (dated in its README). They do not update themselves.
-- Some README text lags behind: the top README still describes Cruise Perf as Sideloadly-only, but it now uploads to TestFlight too. Trust the workflows.
 - This repository is public. Never commit personal data, the Access database, Dropbox contents, or anything secret.
 
 ## Background
