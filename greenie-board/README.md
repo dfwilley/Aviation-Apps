@@ -12,6 +12,16 @@ Open it at https://dfwilley.github.io/Aviation-Apps/greenie-board/
 
 The files are read in the browser. Nothing is uploaded. The board is kept in that browser only; **Settings** has buttons to save and load a backup file, which is also how to move the board to another device.
 
+## iPhone app
+
+`ios/` turns this same page into an iPhone app called **Greenie Board**, for installing with Sideloadly. The app carries its own copy of the page's files (copied in when it is built), so it works with no internet and grades exactly the way the web page does. There is only one copy to edit: change the web page and the app follows on the next build.
+
+- **Download:** https://github.com/dfwilley/Aviation-Apps/releases/download/greenie-board-latest/GreenieBoard.ipa (always the newest build). Open it in Sideloadly on the PC and sign in with the paid Apple Developer Apple ID; the install lasts about a year.
+- **Building:** `.github/workflows/greenie-board-ipa.yml` runs `node test.js`, builds the app on a GitHub Mac, takes a simulator screenshot, and on `main` replaces the files in the `greenie-board-latest` release.
+- **Import:** the Import button opens the iPhone file picker; choose the `DEMO-....LOG` files from Files or Dropbox.
+- **Backup:** Save backup opens the iPhone share sheet, so the file can go to Files or Dropbox. Load backup reads it back.
+- The app keeps its own board, separate from the web page in Safari. Save a backup in one and load it in the other to move landings across.
+
 ## What it reads
 
 The HXr recording is a raw copy of what arrived on its serial ports. Each record is a stream number (1 byte), a time in milliseconds since power-on (4 bytes), a length (4 bytes) and the data. The app uses two kinds of data:
