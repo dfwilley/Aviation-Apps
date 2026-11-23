@@ -272,6 +272,13 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
      source:FIX_SRC+" (2024 checklist)", method:"The earlier review also flagged its 8 quart oil figure and its gascolator mention, which you said isn't there."}
   ];
   SEED_ADDED.forEach(function(p){p.status="open";p.added="2026-11-19";});
+  var SEED_ADDED_1123 = [
+    {id:"rec-engine-hp", type:"records", title:"Engine rated horsepower: confirm 210 or 215 hp before editing the POH or checklist",
+     due:"Before the checklist fix", source:"Engine data plate check, November 23, 2026",
+     method:"Data plate confirmed YIO-390-EXP10, S/N EL-903-80E.\nLycoming's YIO-390-B manual (60297-37) rates this engine family at 210 hp at 2,700 RPM. Owner listings for other EXP10s say 210 or 215. The 215 hp figure is official for the later IO-390-EXP119.\nCheck the Lycoming engine logbook or factory spec sheet that came with the engine for its rated hp, then fix the POH and checklist to match."}
+  ];
+  SEED_ADDED_1123.forEach(function(p){p.status="open";p.added="2026-11-23";});
+  SEED_ADDED = SEED_ADDED.concat(SEED_ADDED_1123);
   var ORIGINAL_SEED_IDS = SEED.map(function(p){return p.id;});
   SEED = SEED.concat(SEED_ADDED);
 
