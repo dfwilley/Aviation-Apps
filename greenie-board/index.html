@@ -47,9 +47,14 @@ h2{font-size:1.15rem;margin:0 0 8px}
 .board .who{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
 .board .who span:last-child{font-variant-numeric:tabular-nums}
 .squares{display:flex;flex-wrap:wrap;gap:5px}
-.squares{gap:0;border-top:2px solid #e9eef4;border-left:2px solid #e9eef4;width:fit-content;max-width:100%}
+.squares{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border-top:2px solid #e9eef4;border-left:2px solid #e9eef4}
 .squares:empty,.squares.none{border:0}
-.sq{width:40px;height:40px;border-radius:0;border:0;border-right:2px solid #e9eef4;border-bottom:2px solid #e9eef4;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;background:var(--c)}
+.sq{width:auto;height:auto;aspect-ratio:1;min-width:0;border-radius:0;border:0;border-right:2px solid #e9eef4;border-bottom:2px solid #e9eef4;font:inherit;font-weight:700;font-size:clamp(.8rem,3.6vw,1.15rem);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;background:var(--c)}
+.sq.blank{background:transparent;cursor:default}
+.board{max-width:460px;margin-left:auto;margin-right:auto}
+#boardView .bar,#importMsg{max-width:460px;margin-left:auto;margin-right:auto}
+.btn.link,button.link{font:inherit;background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
+.dhead .sq{width:40px;height:40px;font-size:.8rem}
 .sq.green{--c:var(--g-green)} .sq.yellow{--c:var(--g-yellow);color:#2a2000} .sq.brown{--c:var(--g-brown)}
 .sq.red{--c:var(--g-red)} .sq.blue{--c:var(--g-blue)}
 /* A night landing: the box is cut corner to corner, grade color above, black below. */
@@ -97,37 +102,13 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
 </div></header>
 <main>
   <div id="boardView">
-    <section class="card" aria-labelledby="boardH">
-      <div class="bar">
-        <h2 id="boardH" style="margin:0">The board</h2>
-        <span class="spacer"></span>
-        <div class="seg" role="group" aria-label="Which landings to show">
-          <button data-period="30" aria-pressed="true">Last 30 days</button>
-          <button data-period="all" aria-pressed="false">All</button>
-        </div>
-      </div>
-      <div class="board">
-        <div class="who"><span id="pilot">N721NE</span><span id="gpa"></span></div>
-        <div class="squares" id="squares"></div>
-      </div>
-      <div class="stats" id="stats"></div>
-      <div class="legend">
-        <span><i style="background:var(--g-green)"></i>OK (4.0), underlined OK is perfect (5.0)</span>
-        <span><i style="background:var(--g-yellow)"></i>Fair (3.0)</span>
-        <span><i style="background:var(--g-blue)"></i>Bolter, very long (2.5)</span>
-        <span><i style="background:var(--g-brown)"></i>No grade (2.0)</span>
-        <span><i style="background:var(--g-red)"></i>Cut pass (0.0)</span>
-        <span><i style="background:var(--g-green)"></i>Full box: day</span>
-        <span><i style="background:linear-gradient(135deg,var(--g-green) 0 50%,#000 50% 100%)"></i>Cut corner to corner with black: night</span>
-      </div>
-      <p class="hint">Tap a box to open that landing.</p>
-    </section>
-    <div class="bar">
-      <button class="btn primary" id="pickBtn">Add landings from HXr log files</button>
+    <div class="board">
+      <div class="who"><span id="pilot">N721NE</span><span id="gpa"></span></div>
+      <div class="squares" id="squares"></div>
+    </div>
+    <div class="bar" style="margin-top:10px">
+      <button class="btn small" id="pickBtn">Import landings</button>
       <input type="file" id="file" multiple hidden>
-      <span class="spacer"></span>
-      <button class="btn" id="howBtn">How grading works</button>
-      <button class="btn" id="setBtn">Settings</button>
     </div>
     <div id="importMsg" role="status" aria-live="polite"></div>
   </div>
@@ -138,7 +119,8 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
   </div>
 </main>
 <footer>
-  <p>To add landings, pick all the DEMO-….LOG files from a flight on the HXr's USB stick; they are read on this device and nothing is uploaded. Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
+  <p><button class="link" id="setBtn">Settings</button> · <button class="link" id="howBtn">How grading works</button></p>
+  <p>The board shows your last 30 landings, oldest at the top left. Tap a box to open that landing. To import, pick all the DEMO-….LOG files from a flight on the HXr's USB stick; they are read on this device and nothing is uploaded. Each browser keeps its own copy of the board. Use Settings to save a backup file or move the board to another device. This is a debriefing aid for fun and practice; it is not a flight-planning or training-approved tool.</p>
 </footer>
 
 <dialog id="setDlg" aria-labelledby="setH">
@@ -190,6 +172,15 @@ footer{padding:0 16px 30px;color:var(--muted);font-size:.85rem}
   <p><b>Touchdown point.</b> From 150 ft short of your target to 200 ft past it is on target. Shorter than that is (SHORT). Up to 500 ft long is (LONG), up to 1,000 ft is LONG, and more than 1,000 ft long is a bolter.</p>
   <p><b>The grade.</b> Small comments add up. A clear deviation in close, at the threshold or at touchdown makes the pass Fair. Anything way off close in, or touching down before the threshold, is No grade. A touchdown of 2 G or more is a Cut pass. No comments at all, with the touchdown on target, earns the underlined OK.</p>
   <p><b>Day and night.</b> A day landing is a full box in the grade color. A night landing is a box cut corner to corner, with the grade color above and black below. Night here is the FAA meaning: the sun more than 6° below the horizon at the airport (after evening civil twilight, before morning civil twilight). Ready rooms each marked night their own way; this is one of the ways.</p>
+  <div class="legend">
+    <span><i style="background:var(--g-green)"></i>OK (4.0), underlined OK is perfect (5.0)</span>
+    <span><i style="background:var(--g-yellow)"></i>Fair (3.0)</span>
+    <span><i style="background:var(--g-blue)"></i>Bolter, very long (2.5)</span>
+    <span><i style="background:var(--g-brown)"></i>No grade (2.0)</span>
+    <span><i style="background:var(--g-red)"></i>Cut pass (0.0)</span>
+    <span><i style="background:var(--g-green)"></i>Full box: day</span>
+    <span><i style="background:linear-gradient(135deg,var(--g-green) 0 50%,#000 50% 100%)"></i>Cut corner to corner with black: night</span>
+  </div>
   <p><b>Limits.</b> The published runway positions are good to about 20 ft, so do not read much into a few feet of lineup. The HXr smooths its G reading, so a firm landing may not show. If a recording stops before the wheels touch, that landing cannot be graded and the app says so.</p>
   <div class="bar" style="justify-content:flex-end"><button class="btn primary" id="howClose">Close</button></div>
 </dialog>
@@ -208,7 +199,7 @@ function load(){
   var s=null;
   try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   if(!s||typeof s!=='object') s={};
-  s.settings=Object.assign({pilot:'N721NE',scope:'all',period:'30'},Greenie.DEFAULTS,s.settings||{});
+  s.settings=Object.assign({pilot:'N721NE',scope:'all'},Greenie.DEFAULTS,s.settings||{});
   if(!Array.isArray(s.passes)) s.passes=[];
   return s;
 }
@@ -226,8 +217,7 @@ function side(n){ n=Math.round(n); return n===0?'on centerline':fmt(Math.abs(n))
 function shown(){
   var list=state.passes.slice().sort(function(a,b){return a.t-b.t;});
   if(state.settings.scope==='KTUS') list=list.filter(function(p){return p.airport==='KTUS';});
-  if(state.settings.period!=='all'){ var cut=Date.now()/1000-30*86400; list=list.filter(function(p){return p.t>=cut;}); }
-  return list;
+  return list.slice(-30);     // the board holds the last 30 landings
 }
 
 function square(r,tag,night){
@@ -246,17 +236,9 @@ function render(){
 function renderBoard(){
   var st=state.settings;
   $('pilot').textContent=st.pilot||'N721NE';
-  document.querySelectorAll('[data-period]').forEach(function(b){ b.setAttribute('aria-pressed',String(b.dataset.period===(st.period==='all'?'all':'30'))); });
   var list=shown();
   var graded=list.map(function(p){ return {p:p,r:Greenie.gradePass(p,st)}; });
-  var sq=$('squares'); sq.textContent=''; sq.classList.toggle('none',!graded.length);
-  if(!graded.length){
-    var older=state.passes.length, msg;
-    if(!older) msg='No landings yet. Add HXr log files below to post your first pass.';
-    else if(st.period!=='all') msg='No landings in the last 30 days. Press All to see the '+older+(older===1?' landing':' landings')+' on file.';
-    else msg='No KTUS landings on the board yet.';
-    sq.appendChild(el('p','empty',msg));
-  }
+  var sq=$('squares'); sq.textContent='';
   graded.forEach(function(g){
     var b=square(g.r,'button',g.p.night);
     b.title=when(g.p.t)+' '+g.p.airport+' '+g.p.runway+(g.p.night?', night':', day')+': '+g.r.name;
@@ -264,18 +246,11 @@ function renderBoard(){
     b.addEventListener('click',function(){ location.hash='#landing='+Math.round(g.p.t); });
     sq.appendChild(b);
   });
-  var n=graded.length, sum=0, counts={};
-  graded.forEach(function(g){ sum+=g.r.points; counts[g.r.color]=(counts[g.r.color]||0)+1; });
+  // Fill the rest of the 6 by 5 board with empty boxes.
+  for(var k=graded.length;k<30;k++){ var e=el('div','sq blank'); e.setAttribute('aria-hidden','true'); sq.appendChild(e); }
+  var n=graded.length, sum=0;
+  graded.forEach(function(g){ sum+=g.r.points; });
   $('gpa').textContent=n?fmt(sum/n,2)+' average':'';
-  var stats=$('stats'); stats.textContent='';
-  var addStat=function(v,k){ var d=el('div','stat'); d.appendChild(el('b','',v)); d.appendChild(el('span','',k)); stats.appendChild(d); };
-  if(n){
-    addStat(String(n),n===1?'landing':'landings');
-    addStat(fmt(sum/n,2),'average grade');
-    addStat(fmt(100*(counts.green||0)/n)+'%','boarding rate (OK passes)');
-    var nn=graded.filter(function(g){return g.p.night;}).length;
-    addStat((n-nn)+' / '+nn,'day / night');
-  }
 }
 
 // The page for one landing.
@@ -434,8 +409,6 @@ async function addFiles(files){
     if(added){ save(); render(); }
     var parts=[];
     if(added) parts.push(added+(added===1?' landing':' landings')+' added to the board.');
-    var cut=Date.now()/1000-30*86400;
-    if(added&&state.settings.period!=='all'&&found.passes.some(function(p){ return p.t<cut; })) parts.push('Some are more than 30 days old: press All to see them.');
     if(dup) parts.push(dup+(dup===1?' landing was':' landings were')+' already on the board.');
     if(!added&&!dup) parts.push('No touchdown on a known runway was found in '+(files.length===1?'that file':'those files')+'.');
     note(parts.join(' '));
@@ -451,9 +424,6 @@ async function addFiles(files){
 $('pickBtn').addEventListener('click',function(){ $('file').click(); });
 $('file').addEventListener('change',function(){ var fs=Array.prototype.slice.call(this.files); this.value=''; addFiles(fs); });
 
-document.querySelectorAll('[data-period]').forEach(function(b){
-  b.addEventListener('click',function(){ state.settings.period=b.dataset.period; save(); render(); });
-});
 $('backBtn').addEventListener('click',toBoard);
 window.addEventListener('hashchange',render);
 
