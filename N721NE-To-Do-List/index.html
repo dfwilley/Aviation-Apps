@@ -305,7 +305,11 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     {id:"rec-poh-engine", done:"2026-11-23",
      result:"POH Rev 1.11: section 1.1 engine model changed to Lycoming YIO-390-EXP10 (data plate). No logbook entry needed; no due dates changed."},
     {id:"rec-poh-mz30", done:"2026-11-23",
-     result:"MZ-30L enable is jumpered, so it is always on. POH Rev 1.11 section 8.8 now says the enable circuit is jumpered closed (no cockpit switch), so it is on at all times and charges Battery 2. No logbook entry needed; no due dates changed."}
+     result:"MZ-30L enable is jumpered, so it is always on. POH Rev 1.11 section 8.8 now says the enable circuit is jumpered closed (no cockpit switch), so it is on at all times and charges Battery 2. No logbook entry needed; no due dates changed."},
+    {id:"rec-engine-hp", done:"2026-11-23",
+     result:"Rated horsepower is 210 hp (YIO-390-EXP10 = experimental IO-390-A). POH Rev 1.11 says 210 hp in all four places, with power loading 9.76 lb/hp. The 2024 checklist already said 210 hp, so it needed no change. Cruise Perf already used 210 hp IO-390-A charts. No logbook entry needed; no due dates changed."},
+    {id:"rec-checklist-hp", done:"2026-11-23",
+     result:"No change needed. The engine is 210 hp, and the 2024 checklist already says 210 horsepower at 2,700 RPM (this item's title had it backwards)."}
   ];
   function applyDoneUpdates(){
     var applied=[];
