@@ -252,7 +252,8 @@ function renderBoard(){
   $('olderBtn').disabled=page>=pages-1; $('newerBtn').disabled=page===0;
   if(pages>1){
     var day=function(p){ return new Date(p.t*1000).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); };
-    $('pageInfo').textContent='Landings '+(start+1)+' to '+end+' of '+all.length+' \u00b7 '+day(list[0])+' to '+day(list[list.length-1]);
+    var d0=day(list[0]), d1=day(list[list.length-1]);
+    $('pageInfo').textContent=(list.length===1?'Landing '+end:'Landings '+(start+1)+' to '+end)+' of '+all.length+' \u00b7 '+(d0===d1?d0:d0+' to '+d1);
   }
   var graded=list.map(function(p){ return {p:p,r:Greenie.gradePass(p,st)}; });
   var sq=$('squares'); sq.textContent='';
