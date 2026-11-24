@@ -100,24 +100,24 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     <input type="file" id="importFile" accept="application/json" hidden>
     <span id="status"></span>
   </div>
-  The list is shared through the Aviation-Apps repository on GitHub, so a connected device sees the same list as every other one. Export still makes a backup file.
+  The list is kept in a private GitHub repository, so every connected device sees the same list. Export still makes a backup file.
   <button class="btn small" id="disconnectBtn" hidden>Disconnect this device</button>
 </footer>
 
 <dialog id="keyDlg">
   <form method="dialog" id="keyForm">
     <h2 style="margin:0;font-size:1.2rem">Connect this device</h2>
-    <p class="hint">Any device can read the shared list. To save changes to it, this browser needs a GitHub access key (GitHub calls it a "fine-grained personal access token"). You do this once per device.</p>
+    <p class="hint">The shared list is private. To see it and save to it, this browser needs a GitHub access key (GitHub calls it a "fine-grained personal access token"). You do this once per device.</p>
     <ol class="steps">
       <li>Open <a href="https://github.com/settings/personal-access-tokens/new?name=N721NE+To+Do+List&amp;description=Lets+the+N721NE+To+Do+List+page+save+the+shared+list&amp;contents=write" target="_blank" rel="noopener">GitHub's new access key page</a> and sign in.</li>
       <li>Token name: <strong>N721NE To Do List</strong>. Expiration: pick the longest you're comfortable with.</li>
-      <li>Repository access: choose <strong>Only select repositories</strong>, then pick <strong>Aviation-Apps</strong>.</li>
+      <li>Repository access: choose <strong>Only select repositories</strong>, then pick <strong>N721NE-To-Do-Data</strong> and nothing else.</li>
       <li>Permissions: under Repository permissions, set <strong>Contents</strong> to <strong>Read and write</strong>. Leave everything else alone.</li>
       <li>Press <strong>Generate token</strong>, copy the key (it starts with <code>github_pat_</code>) and paste it here.</li>
     </ol>
     <label for="fKey">Access key</label>
     <input id="fKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
-    <p class="hint">The key is kept in this browser only. You can paste the same key on each device.</p>
+    <p class="hint">The key is kept in this browser only, and it can reach nothing but the list. You can paste the same key on each device.</p>
     <div class="dlg-actions">
       <button class="btn" value="cancel" formnovalidate>Cancel</button>
       <button class="btn primary" value="save">Connect</button>
@@ -572,11 +572,11 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
   });
 
   // ---- Shared list -------------------------------------------------------
-  // The list lives in list.json in the repository. Every device reads it; a
-  // device with an access key also saves to it. For each item the newest
-  // change wins, so two devices can be used without one undoing the other.
-  var GH_API = "https://api.github.com/repos/dfwilley/Aviation-Apps/contents/N721NE-To-Do-List/list.json";
-  var GH_BRANCH = "main";
+  // The list lives in list.json in a private repository that holds nothing
+  // else, so the access key a device stores can only reach the list. A device
+  // needs the key to read or save. For each item the newest change wins, so
+  // two devices can be used without one undoing the other.
+  var GH_API = "https://api.github.com/repos/dfwilley/N721NE-To-Do-Data/contents/list.json";
   var TOKEN_KEY = "n721ne-todo-github-key", DEL_KEY = "n721ne-todo-deleted";
   var SYNCED_KEY = "n721ne-todo-shared", BACKUP_KEY = "n721ne-todo-before-sharing", NOTES_KEY = "n721ne-todo-unsent";
   var deleted = {}, pendingNotes = [], syncing = false, syncAgain = false, syncTimer = null, lastSync = 0;
@@ -657,26 +657,19 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     if(!d || !Array.isArray(d.items)) throw new Error("bad list");
     return {items: d.items.filter(function(x){ return x && x.id && x.title; }), deleted: d.deleted||{}};
   }
-  // Resolves to {items, deleted, sha} or {missing:true}; sha is null when read without GitHub's API.
+  // Resolves to {items, deleted, sha} or {missing:true}.
   function fetchShared(){
-    return fetch(GH_API+"?ref="+GH_BRANCH+"&t="+Date.now(), {headers: ghHeaders(), cache:"no-store"}).then(function(r){
+    return fetch(GH_API+"?t="+Date.now(), {headers: ghHeaders(), cache:"no-store"}).then(function(r){
       if(r.status===404) return {missing:true};
       if(r.status===401) throw {kind:"key"};
-      if(!r.ok){
-        if(token()) throw {kind:"http", status:r.status};
-        // GitHub limits how often a device without a key may ask; fall back to the published copy.
-        return fetch("list.json?t="+Date.now(), {cache:"no-store"}).then(function(r2){
-          if(!r2.ok) throw {kind:"http", status:r2.status};
-          return r2.text().then(function(t){ var d = parseShared(t); d.sha = null; return d; });
-        });
-      }
+      if(!r.ok) throw {kind:"http", status:r.status};
       return r.json().then(function(j){ var d = parseShared(fromB64(j.content)); d.sha = j.sha; return d; });
     });
   }
   function pushShared(sha){
     var msg = "N721NE To Do List: "+(pendingNotes.length===1 ? pendingNotes[0] : pendingNotes.length>1 ? pendingNotes.length+" changes from the web page" : "combined a device's list with the shared list");
     var sent = pendingNotes.length;
-    var body = {message: msg, branch: GH_BRANCH,
+    var body = {message: msg,
       content: toB64(JSON.stringify({version:1, about:"Shared N721NE To Do List. The web page reads and saves this file.", items:items, deleted:sortKeys(deleted)}, null, 2)+"\n")};
     if(sha) body.sha = sha;
     return fetch(GH_API, {method:"PUT", headers: ghHeaders(), body: JSON.stringify(body)}).then(function(r){
@@ -689,13 +682,17 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
   }
   function sync(tries){
     if(syncing){ syncAgain = true; return; }
-    syncing = true; clearTimeout(syncTimer);
+    clearTimeout(syncTimer);
+    if(!token()){
+      setSync(pendingNotes.length ? "This device isn't connected, so its changes aren't shared yet." : "This device isn't connected. It's showing its own copy of the list.", true);
+      return;
+    }
+    syncing = true;
     tries = tries||0;
     var again = false;
     fetchShared().then(function(remote){
       lastSync = Date.now();
       if(remote.missing){
-        if(!token()){ setSync("The shared list isn't set up yet. This device is showing its own copy.", true); return; }
         return pushShared(null).then(function(){ setSync("Shared list created · "+clock()); });
       }
       var first = false;
@@ -707,17 +704,15 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
       if(JSON.stringify(items) !== before && !document.querySelector("dialog[open]")) render();
       if(sameList(items, deleted, remote.items, remote.deleted)){
         pendingNotes = []; saveSyncState();
-        setSync((token() ? "Shared list up to date" : "Showing the shared list. Changes made here stay on this device until it's connected")+" · "+clock());
+        setSync("Shared list up to date · "+clock());
         return;
       }
-      if(!token()){ setSync("This device has changes that aren't shared yet.", true); return; }
-      if(!remote.sha) throw {kind:"http", status:0};
       return pushShared(remote.sha).then(function(){ setSync("Saved to the shared list · "+clock()); });
     }).catch(function(err){
       var k = err && err.kind;
       if(k==="conflict" && tries<3){ again = true; return; }
       if(k==="key"){ setSync("GitHub didn't accept this device's access key. Disconnect and connect again with a new key.", true); }
-      else if(k==="denied"){ setSync("The access key can't save to Aviation-Apps. It needs Contents set to Read and write for that repository.", true); }
+      else if(k==="denied"){ setSync("This device's access key can't reach the list. Disconnect (bottom of the page), then connect with a key made for the N721NE-To-Do-Data repository with Contents set to Read and write.", true); }
       else if(k==="conflict"){ setSync("Couldn't save just now because another device was saving. Will try again.", true); }
       else setSync("Can't reach the shared list right now. Changes are kept on this device and will be sent later.", true);
     }).then(function(){
@@ -736,7 +731,7 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     setSync("Connecting…"); sync();
   });
   document.getElementById("disconnectBtn").addEventListener("click", function(){
-    if(!confirm("Disconnect this device? It will still show the shared list, but changes made here won't be saved to it.")) return;
+    if(!confirm("Disconnect this device? It will keep its own copy of the list, but won't see or save changes to the shared one.")) return;
     try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
     setSync("Disconnected."); sync();
   });
