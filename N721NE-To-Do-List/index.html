@@ -311,7 +311,19 @@ footer{max-width:820px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font
     {id:"rec-checklist-hp", done:"2026-11-23",
      result:"No change needed. The engine is 210 hp, and the 2024 checklist already says 210 horsepower at 2,700 RPM (this item's title had it backwards)."},
     {id:"rec-wb-output", done:"2026-11-23",
-     result:"Removed the stray Plane Power Alternator (Main) pin 1 from the B/U Alternator Output row (Function List, now row 36). The row now runs BAT2 to the B/U Alternator Reg Output Power Positive to Firewall J1 pin 1. Verified in the saved workbook. Also removed a similar stray MZ-30L pin 5 from the Roll Trim: Gnd row. No logbook entry needed; no due dates changed."}
+     result:"Removed the stray Plane Power Alternator (Main) pin 1 from the B/U Alternator Output row (Function List, now row 36). The row now runs BAT2 to the B/U Alternator Reg Output Power Positive to Firewall J1 pin 1. Verified in the saved workbook. Also removed a similar stray MZ-30L pin 5 from the Roll Trim: Gnd row. No logbook entry needed; no due dates changed."},
+    {id:"rec-engine-model", done:"2026-11-23",
+     result:"Database Equipment row now reads Lycoming YIO-390-EXP10, S/N EL-903-80E, matching the data plate. Confirmed in the maintenance database saved November 23, 2026."},
+    {id:"rec-poh-oil", done:"2026-11-23",
+     result:"POH Rev 1.11 section 1.9 now says 8 quarts maximum, which agrees with the 8 quarts in the weighing section. Listed in the POH revision record."},
+    {id:"rec-poh-tires", done:"2026-11-23",
+     result:"POH Rev 1.11 sections 8.4 and 9.5 now say 60 PSI for the main tires, matching the September 30, 2024 log entry. Listed in the POH revision record."},
+    {id:"rec-poh-ahrs", done:"2026-11-23",
+     result:"POH Rev 1.11 section 8.10 no longer mentions GPS in the AHRS description. This change is not listed in the POH revision record."},
+    {id:"rec-poh-weight", done:"2026-11-23",
+     result:"POH Rev 1.11 uses 1,715 lb for light weight in both the performance specifications and the stall table. This change is not listed in the POH revision record."},
+    {id:"rec-wb-enable", done:"2026-11-23",
+     result:"The MZ-30L enable is jumpered, so there is no switch wire. The blank B/U Alternator Enable row is gone from the workbook's Function List (saved November 23, 2026)."}
   ];
   function applyDoneUpdates(){
     var applied=[];
