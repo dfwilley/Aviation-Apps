@@ -41,8 +41,17 @@ enum AccessFolder {
     static func remember(_ url: URL) throws {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? []
-        guard names.contains(where: { $0.lowercased().hasSuffix(".accdb") || $0.hasPrefix(dataFilePrefix) }) else {
+        // Dropbox hands over its file list only when asked through a file coordinator,
+        // and the list can still be empty for a folder the phone hasn't opened before.
+        // So only turn a folder down when it lists files and none of them are ours.
+        var names: [String] = []
+        var listError: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &listError) { folder in
+            names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        }
+        let hasOurFiles = names.contains { $0.lowercased().hasSuffix(".accdb") || $0.hasPrefix(dataFilePrefix) }
+        let isNamedRight = url.lastPathComponent.caseInsensitiveCompare("Maintenance Software") == .orderedSame
+        guard hasOurFiles || isNamedRight || names.isEmpty else {
             throw FolderError.wrongFolder
         }
         let bookmark = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
