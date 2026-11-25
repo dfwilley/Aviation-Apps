@@ -432,6 +432,10 @@ struct ComposerView: View {
                         Button("Mark as logged") { markLogged() }
                             .buttonStyle(HangarButtonStyle(kind: .primary))
                     }
+                } else if linked {
+                    // For an entry that was marked sent but never reached the import file.
+                    Button("Send to Access again") { send() }
+                        .buttonStyle(HangarButtonStyle())
                 }
                 Button(entry.status == .sent ? "Save changes" : "Save draft") { saveDraft() }
                     .buttonStyle(HangarButtonStyle())
