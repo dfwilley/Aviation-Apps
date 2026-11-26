@@ -5,14 +5,18 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showArrange = false
 
-    // Timer. It starts with the first failed alternator or battery and tracks charge drawn since then.
-    @State private var timerStart: Date?
+    // Battery drain. It starts with the first failed alternator or battery and tracks charge drawn since then.
+    // `lastTick` is set while that tracking is running.
     @State private var lastTick: Date?
     @State private var now = Date()
     @State private var flashOn = false
     @State private var battery1UsedAh = 0.0
     @State private var battery2UsedAh = 0.0
     @State private var ebbsUsedAh = 0.0
+    // The moment each countdown reaches zero, so the countdowns tick evenly with the clock.
+    @State private var battery1Deadline: Date?
+    @State private var battery2Deadline: Date?
+    @State private var ebbsDeadline: Date?
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     // Layout of the data boxes: their order, and which are shown small.
@@ -44,11 +48,18 @@ struct ContentView: View {
     var body: some View {
         let config = self.config
         let result = PowerModel.evaluate(inputs, config)
+        let left = countdowns(result)
 
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    DiagramView(inputs: $inputs, result: result)
+                    DiagramView(inputs: $inputs, result: result,
+                                battery1Timer: boxTimer(left.battery1),
+                                battery2Timer: boxTimer(left.battery2),
+                                ebbsTimer: boxTimer(left.ebbs)
+                                    ?? DiagramView.BoxTimer(text: "Lasts " + PowerModel.durationText(result.ebbsLifeMin),
+                                                            running: false),
+                                flashOn: flashOn)
                         .padding(8)
                         .background(Theme.background)
                     Text("Touch an alternator, a battery or the EMER box to turn it off or on.")
@@ -56,11 +67,8 @@ struct ContentView: View {
                         .foregroundColor(Theme.dim)
                     legend
                     rpmControl
-                    if timerStart != nil {
-                        timerBanner(result)
-                    }
                     ForEach(DataBox.order(from: boxOrderRaw)) { box in
-                        boxView(box, result, config)
+                        boxView(box, result, config, left)
                             .draggable(box.rawValue)
                             .dropDestination(for: String.self) { items, _ in
                                 moveBox(items.first, before: box)
@@ -106,35 +114,37 @@ struct ContentView: View {
                     .preferredColorScheme(.dark)
             }
             .onReceive(clock) { tick($0) }
-            .onChange(of: inputs) { _ in syncTimer() }
+            .onChange(of: inputs) { _ in syncTracking() }
         }
     }
 
-    // MARK: - Timer
+    // MARK: - Countdowns
 
-    /// Starts the timer on the first failure and clears it when everything is back on.
-    private func syncTimer() {
+    /// Starts tracking battery drain on the first failure and clears it when everything is back on.
+    private func syncTracking() {
         if anyFailure {
-            if timerStart == nil {
+            if lastTick == nil {
                 let t = Date()
-                timerStart = t
                 lastTick = t
                 now = t
             }
         } else {
-            timerStart = nil
             lastTick = nil
             battery1UsedAh = 0
             battery2UsedAh = 0
             ebbsUsedAh = 0
         }
-        UIApplication.shared.isIdleTimerDisabled = timerStart != nil
+        UIApplication.shared.isIdleTimerDisabled = lastTick != nil
+        syncDeadlines()
     }
 
     /// Runs once a second. Uses the real clock, so time spent with the phone locked still counts.
     private func tick(_ date: Date) {
         flashOn.toggle()
-        guard timerStart != nil, let last = lastTick else { return }
+        guard let last = lastTick else {
+            now = date
+            return
+        }
         var remaining = date.timeIntervalSince(last)
         // Work through a long gap in short steps so a battery that runs out part way is handled.
         while remaining > 0 {
@@ -151,16 +161,38 @@ struct ContentView: View {
         }
         lastTick = date
         now = date
+        syncDeadlines()
     }
 
-    /// The limits that are counting down, with minutes left.
-    private func countdowns(_ r: ElectricalResult) -> [(name: String, minutes: Double)] {
-        var list: [(name: String, minutes: Double)] = []
-        if let t = r.mainBusLostAtMin, t > 0 { list.append(("Main bus", t)) }
-        if let t = r.engineLostAtMin, t > 0 { list.append(("Engine power", t)) }
-        if let t = r.essentialOverloadAtMin, t > 0 { list.append(("Battery help for the engine", t)) }
-        if r.ebbsState == .supplying, r.ebbsLifeMin > 0 { list.append(("EBBS avionics", r.ebbsLifeMin)) }
-        return list
+    /// Seconds left on each battery's countdown. nil means that battery is not running down.
+    private struct Countdowns {
+        var battery1: Double?
+        var battery2: Double?
+        var ebbs: Double?
+    }
+
+    private func countdowns(_ r: ElectricalResult) -> Countdowns {
+        Countdowns(battery1: secondsLeft(r.battery1EmptyAtMin, battery1Deadline),
+                   battery2: secondsLeft(r.battery2EmptyAtMin, battery2Deadline),
+                   ebbs: r.ebbsState == .supplying ? secondsLeft(r.ebbsLifeMin, ebbsDeadline) : nil)
+    }
+
+    /// Turns the model's estimate (in minutes, at the loads set now) into seconds for a countdown.
+    /// The estimate moves in small jumps, so between changes the countdown follows the clock to
+    /// tick once a second. A real change, such as a new load, moves it straight to the new estimate.
+    private func secondsLeft(_ minutes: Double?, _ deadline: Date?) -> Double? {
+        guard let minutes, minutes > 0 else { return nil }
+        let estimate = minutes * 60
+        guard lastTick != nil, minutes < PowerModel.horizonMin, let deadline else { return estimate }
+        let ticking = deadline.timeIntervalSince(now)
+        return abs(ticking - estimate) <= 8 ? max(0, ticking) : estimate
+    }
+
+    private func syncDeadlines() {
+        let left = countdowns(PowerModel.evaluate(inputs, config))
+        battery1Deadline = left.battery1.map { now.addingTimeInterval($0) }
+        battery2Deadline = left.battery2.map { now.addingTimeInterval($0) }
+        ebbsDeadline = left.ebbs.map { now.addingTimeInterval($0) }
     }
 
     private func expiring(_ minutes: Double?) -> Bool {
@@ -168,35 +200,14 @@ struct ContentView: View {
         return minutes > 0 && minutes <= PowerModel.expiryWarningMin
     }
 
-    private func timerBanner(_ r: ElectricalResult) -> some View {
-        let soon = countdowns(r).filter { expiring($0.minutes) }
-        let elapsed = max(0, Int(now.timeIntervalSince(timerStart ?? now)))
-        let lit = !soon.isEmpty && flashOn
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Since first failure")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text(String(format: "%d:%02d:%02d", elapsed / 3600, elapsed / 60 % 60, elapsed % 60))
-                    .font(.title2.weight(.bold).monospacedDigit())
-            }
-            ForEach(soon, id: \.name) { item in
-                Text("\(item.name): \(PowerModel.durationText(item.minutes)) left")
-                    .font(.headline)
-            }
-            if soon.isEmpty {
-                Text("Times below count down from full batteries at the moment of the first failure.")
-                    .font(.caption)
-                    .foregroundColor(Theme.dim)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .foregroundColor(lit ? .black : .white)
-        .background(lit ? Theme.fail : Theme.card)
-        .overlay(RoundedRectangle(cornerRadius: 12)
-            .stroke(soon.isEmpty ? Theme.battery : Theme.fail, lineWidth: 2))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+    private func expiring(seconds: Double?) -> Bool {
+        guard let seconds else { return false }
+        return seconds <= PowerModel.expiryWarningMin * 60
+    }
+
+    private func boxTimer(_ seconds: Double?) -> DiagramView.BoxTimer? {
+        guard let seconds else { return nil }
+        return DiagramView.BoxTimer(text: PowerModel.countdownText(seconds), urgent: expiring(seconds: seconds))
     }
 
     // MARK: - Data boxes
@@ -206,7 +217,8 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func boxView(_ box: DataBox, _ result: ElectricalResult, _ config: ElectricalConfig) -> some View {
+    private func boxView(_ box: DataBox, _ result: ElectricalResult, _ config: ElectricalConfig,
+                         _ left: Countdowns) -> some View {
         let compact = isCompact(box)
         switch box {
         case .load:
@@ -227,7 +239,7 @@ struct ContentView: View {
                     flash: expiring(result.engineLostAtMin) || expiring(result.essentialOverloadAtMin),
                     compact: compact)
         case .batteries:
-            batteriesCard(result, config, compact: compact)
+            batteriesCard(result, config, left, compact: compact)
         case .notes:
             notesCard(result, compact: compact)
         }
@@ -364,22 +376,24 @@ struct ContentView: View {
         return t <= 0 ? "No power" : PowerModel.durationText(t) + " left"
     }
 
-    private func batteriesCard(_ r: ElectricalResult, _ c: ElectricalConfig, compact: Bool) -> some View {
+    private func batteriesCard(_ r: ElectricalResult, _ c: ElectricalConfig, _ left: Countdowns,
+                               compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: compact ? 8 : 12) {
             Text("BATTERIES").font(.caption.weight(.bold)).foregroundColor(Theme.dim)
             batteryRow(name: "Battery 1 (main)", model: "EarthX ETX-900", rated: Ratings.battery1RatedAh,
                        usable: c.battery1UsableAh, left: c.battery1LeftAh,
-                       status: batteryStatus(r.battery1State, emptyAt: r.battery1EmptyAtMin),
-                       color: batteryColor(r.battery1State), compact: compact)
+                       status: batteryStatus(r.battery1State), color: batteryColor(r.battery1State),
+                       countdown: left.battery1, countdownID: "battery1Countdown", compact: compact)
             if !compact { Divider().background(Theme.cardEdge) }
             batteryRow(name: "Battery 2 (alternate)", model: "EarthX ETX-680C", rated: Ratings.battery2RatedAh,
                        usable: c.battery2UsableAh, left: c.battery2LeftAh,
-                       status: batteryStatus(r.battery2State, emptyAt: r.battery2EmptyAtMin),
-                       color: batteryColor(r.battery2State), compact: compact)
+                       status: batteryStatus(r.battery2State), color: batteryColor(r.battery2State),
+                       countdown: left.battery2, countdownID: "battery2Countdown", compact: compact)
             if !compact { Divider().background(Theme.cardEdge) }
             batteryRow(name: "Backup battery", model: "EarthX EBBS", rated: Ratings.ebbsRatedAh,
                        usable: c.ebbsUsableAh, left: c.ebbsLeftAh,
-                       status: ebbsStatus(r, c), color: ebbsColor(r), compact: compact)
+                       status: ebbsStatus(r, c), color: ebbsColor(r),
+                       countdown: left.ebbs, countdownID: "ebbsCountdown", compact: compact)
             if !compact {
                 Text("Usable figures are \(Int(usablePercent))% of the rated capacity. Change the share in Settings as the batteries age.")
                     .font(.caption)
@@ -391,9 +405,11 @@ struct ContentView: View {
     }
 
     private func batteryRow(name: String, model: String, rated: Double, usable: Double, left: Double,
-                            status: String, color: Color, compact: Bool) -> some View {
-        // Once the timer has drawn some charge, show what is left instead of the starting figure.
+                            status: String, color: Color, countdown: Double?, countdownID: String,
+                            compact: Bool) -> some View {
+        // Once some charge has been drawn, show what is left instead of the starting figure.
         let drawn = usable - left > 0.05
+        let urgent = expiring(seconds: countdown)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
                 Text(name).font(.subheadline.weight(.semibold))
@@ -412,19 +428,27 @@ struct ContentView: View {
                 }
             }
             Text(status).font(.footnote.weight(.medium)).foregroundColor(color)
+            if let countdown {
+                // Time left on this battery at the loads set now.
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Time remaining").font(.footnote).foregroundColor(Theme.dim)
+                    Spacer()
+                    Text(PowerModel.countdownText(countdown))
+                        .font((compact ? Font.headline : Font.title2).weight(.bold).monospacedDigit())
+                        .foregroundColor(urgent ? (flashOn ? Theme.fail : .white) : Theme.battery)
+                        .accessibilityIdentifier(countdownID)
+                }
+            }
         }
     }
 
-    private func batteryStatus(_ state: BatteryState, emptyAt: Double?) -> String {
+    private func batteryStatus(_ state: BatteryState) -> String {
         switch state {
         case .failed: return "Failed"
         case .charging: return "Charging"
         case .standby: return "Standing by, not being charged"
         case .empty: return "Empty"
-        case .discharging(let amps):
-            var text = "Supplying \(PowerModel.ampsText(amps))"
-            if let emptyAt { text += " · empty in \(PowerModel.durationText(emptyAt))" }
-            return text
+        case .discharging(let amps): return "Supplying \(PowerModel.ampsText(amps))"
         }
     }
 
@@ -443,7 +467,8 @@ struct ContentView: View {
         switch r.ebbsState {
         case .notArmed: return "Not armed. Comes on with Emergency Power. Would last \(life)."
         case .armed: return "Armed. Takes over if the main bus is lost. Would last \(life)."
-        case .supplying: return "Running the left HXr, SL-30, A210, audio panel and transponder · \(life)"
+        case .supplying:
+            return "Running the left HXr, SL-30, A210, audio panel and transponder at \(PowerModel.ampsText(c.ebbsLoadA))"
         }
     }
 

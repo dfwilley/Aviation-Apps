@@ -25,9 +25,11 @@ final class DiagramTouchTests: XCTestCase {
         XCTAssertTrue(text(app, startingWith: "Fed by Battery 1").waitForExistence(timeout: 5),
                       "touching MAIN ALT did not fail it")
 
-        // The timer starts with the first failure.
-        XCTAssertTrue(text(app, startingWith: "Since first failure").waitForExistence(timeout: 5),
-                      "the timer did not start")
+        // Battery 1 is now running down, so its countdown shows.
+        XCTAssertTrue(app.staticTexts["battery1Countdown"].waitForExistence(timeout: 5),
+                      "the Battery 1 countdown did not show")
+        XCTAssertFalse(text(app, startingWith: "Since first failure").exists,
+                       "the old timer is still showing")
 
         // Battery 1 off as well: the main bus has no source.
         touch(app, x: 48, y: 88)

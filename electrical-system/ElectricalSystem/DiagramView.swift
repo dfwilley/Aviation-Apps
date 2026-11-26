@@ -7,6 +7,19 @@ struct DiagramView: View {
     @Binding var inputs: ElectricalInputs
     let result: ElectricalResult
 
+    /// A time shown as a third line in a battery's box.
+    struct BoxTimer: Equatable {
+        var text: String
+        /// In the last few minutes. The time flashes red.
+        var urgent = false
+        /// False for a time that is only an estimate of what the battery would give, not a running countdown.
+        var running = true
+    }
+    var battery1Timer: BoxTimer?
+    var battery2Timer: BoxTimer?
+    var ebbsTimer: BoxTimer?
+    var flashOn = false
+
     // Where the touchable boxes sit on the drawing grid.
     private static let mainAltBox = CGRect(x: 8, y: 20, width: 80, height: 36)
     private static let battery1Box = CGRect(x: 8, y: 70, width: 80, height: 36)
@@ -145,19 +158,21 @@ struct DiagramView: View {
         }
         box(ctx, s, CGRect(x: 215, y: 196, width: 118, height: 44),
             title: "EBBS  8 Ah", sub: ebbsText, border: ebbsBorder,
-            subColor: result.ebbsState == .supplying ? Theme.battery : .white)
+            subColor: result.ebbsState == .supplying ? Theme.battery : .white, timer: ebbsTimer)
         label(ctx, s, "L HXr · SL-30 · A210 · audio · xpdr", 274, 250, size: 6.5, color: Theme.dim)
 
         // Sources
         sourceBox(ctx, s, Self.mainAltBox, title: "MAIN ALT",
                   sub: "60 A", ok: inputs.mainAltOK, active: inputs.mainAltOK ? .alt : .off)
         sourceBox(ctx, s, Self.battery1Box, title: "BAT 1",
-                  sub: batteryText(result.battery1State), ok: inputs.battery1OK, active: bat1Wire)
+                  sub: batteryText(result.battery1State), ok: inputs.battery1OK, active: bat1Wire,
+                  timer: battery1Timer)
         sourceBox(ctx, s, Self.backupAltBox, title: "BKUP ALT",
                   sub: inputs.lowRPM ? "15 A low RPM" : "30 A", ok: inputs.backupAltOK,
                   active: inputs.backupAltOK ? .alt : .off)
         sourceBox(ctx, s, Self.battery2Box, title: "BAT 2",
-                  sub: batteryText(result.battery2State), ok: inputs.battery2OK, active: bat2Wire)
+                  sub: batteryText(result.battery2State), ok: inputs.battery2OK, active: bat2Wire,
+                  timer: battery2Timer)
     }
 
     private func wire(for state: BatteryState) -> Kind {
@@ -216,20 +231,36 @@ struct DiagramView: View {
     }
 
     private func box(_ ctx: GraphicsContext, _ s: CGFloat, _ r: CGRect, title: String, sub: String,
-                     border: Color, subColor: Color = .white, titleSize: CGFloat = 9, subSize: CGFloat = 8) {
+                     border: Color, subColor: Color = .white, titleSize: CGFloat = 9, subSize: CGFloat = 8,
+                     timer: BoxTimer? = nil) {
         let rect = CGRect(x: r.minX * s, y: r.minY * s, width: r.width * s, height: r.height * s)
         let path = Path(roundedRect: rect, cornerRadius: 5 * s)
         ctx.fill(path, with: .color(Theme.card))
         ctx.stroke(path, with: .color(border), lineWidth: 2 * s)
-        let gap: CGFloat = r.height > 30 ? 7 : 5
-        label(ctx, s, title, r.midX, r.midY - gap, size: titleSize, weight: .bold)
-        label(ctx, s, sub, r.midX, r.midY + gap, size: subSize, weight: .medium, color: subColor)
+        guard let timer else {
+            let gap: CGFloat = r.height > 30 ? 7 : 5
+            label(ctx, s, title, r.midX, r.midY - gap, size: titleSize, weight: .bold)
+            label(ctx, s, sub, r.midX, r.midY + gap, size: subSize, weight: .medium, color: subColor)
+            return
+        }
+        // Three lines: name, state, and the time left.
+        let gap: CGFloat = r.height > 40 ? 12.5 : 10.5
+        let timerColor: Color = !timer.running ? Theme.dim
+            : (timer.urgent ? (flashOn ? Theme.fail : .white) : Theme.battery)
+        label(ctx, s, title, r.midX, r.midY - gap, size: titleSize - 1, weight: .bold)
+        label(ctx, s, sub, r.midX, r.midY, size: subSize - 1, weight: .medium, color: subColor)
+        ctx.draw(Text(timer.text)
+                    .font(.system(size: (timer.running ? 10 : 8) * s, weight: timer.running ? .bold : .medium)
+                        .monospacedDigit())
+                    .foregroundColor(timerColor),
+                 at: CGPoint(x: r.midX * s, y: (r.midY + gap) * s), anchor: .center)
     }
 
     private func sourceBox(_ ctx: GraphicsContext, _ s: CGFloat, _ r: CGRect, title: String, sub: String,
-                           ok: Bool, active: Kind) {
+                           ok: Bool, active: Kind, timer: BoxTimer? = nil) {
         box(ctx, s, r, title: title, sub: ok ? sub : "FAILED",
-            border: ok ? color(active) : Theme.fail, subColor: ok ? .white : Theme.fail)
+            border: ok ? color(active) : Theme.fail, subColor: ok ? .white : Theme.fail,
+            timer: ok ? timer : nil)
         if !ok {
             var x = Path()
             x.move(to: CGPoint(x: r.minX * s, y: r.minY * s))

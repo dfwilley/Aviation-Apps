@@ -406,6 +406,13 @@ enum PowerModel {
         return "\(m / 60) h \(String(format: "%02d", m % 60)) min"
     }
 
+    /// A countdown as hours:minutes:seconds, for example "0:41:30".
+    static func countdownText(_ seconds: Double) -> String {
+        if seconds >= horizonMin * 60 { return "over \(Int(horizonMin / 60)) h" }
+        let s = max(0, Int(seconds.rounded(.down)))
+        return String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+    }
+
     static func ampsText(_ amps: Double) -> String {
         if abs(amps - amps.rounded()) < 0.005 { return "\(Int(amps.rounded())) A" }
         if abs(amps * 10 - (amps * 10).rounded()) < 0.005 { return String(format: "%.1f A", amps) }

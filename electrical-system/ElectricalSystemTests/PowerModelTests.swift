@@ -248,4 +248,12 @@ final class PowerModelTests: XCTestCase {
         XCTAssertEqual(PowerModel.durationText(74.9), "1 h 14 min")
         XCTAssertEqual(PowerModel.durationText(600), "more than 10 h")
     }
+
+    func testCountdownText() {
+        XCTAssertEqual(PowerModel.countdownText(59.9), "0:00:59")
+        XCTAssertEqual(PowerModel.countdownText(41 * 60 + 30), "0:41:30")
+        XCTAssertEqual(PowerModel.countdownText(4494), "1:14:54")
+        XCTAssertEqual(PowerModel.countdownText(0), "0:00:00")
+        XCTAssertEqual(PowerModel.countdownText(600 * 60), "over 10 h")
+    }
 }

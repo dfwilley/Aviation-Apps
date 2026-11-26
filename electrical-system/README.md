@@ -11,7 +11,7 @@ Shows on the phone as "N721NE Elec". Bundle ID `com.dfwilley.electricalsystem`.
 - Touch the EMER box to switch Emergency Power on or off.
 - An engine RPM choice (the backup alternator gives less near idle).
 - A slider for main bus load, 0 to 40 A. Set it to the total on the VP-X page.
-- A timer that starts with the first failed alternator or battery. From then on the app draws down each battery at the current load, so the times count down, and the timer and the affected box flash red in the last 5 minutes. The timer assumes full batteries at the first failure and clears when everything is back on or Reset is pressed. The screen stays awake while it runs.
+- A countdown (hours:minutes:seconds) in the BAT 1, BAT 2 and EBBS boxes on the diagram, and beside each battery in the Batteries box, showing the estimated time remaining at the loads set now. It shows for a battery that is running down or will be. Move the load slider and the countdown moves to the new estimate. From the first failed alternator or battery the app draws down each battery at the current load, so the countdowns run. A countdown and the affected bus box flash red in the last 5 minutes. The drawdown assumes full batteries at the first failure and clears when everything is back on or Reset is pressed. The screen stays awake while it runs. When the EBBS is not running, its box shows how long it would last.
 - The data boxes below the diagram can be moved (hold and drag, or use the arrange button) and switched between full and small size.
 - For each state: which source feeds each bus, how long each bus lasts, each battery's rated and usable capacity, and plain-language notes.
 

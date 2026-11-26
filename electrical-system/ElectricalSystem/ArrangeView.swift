@@ -75,7 +75,7 @@ struct ArrangeView: View {
                         boxOrderRaw = DataBox.raw(order)
                     }
                 } footer: {
-                    Text("Drag the handle on the right to move a box up or down. The diagram and the timer always stay at the top.")
+                    Text("Drag the handle on the right to move a box up or down. The diagram always stays at the top.")
                 }
                 Section {
                     Button("Put everything back") {
