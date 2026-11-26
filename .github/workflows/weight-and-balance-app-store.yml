@@ -7,7 +7,7 @@ name: Weight & Balance - App Store status / submit for review
 # Needs these repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
 
 on:
-  # A push to this work branch only looks (status); it never submits.
+  # One time only: this push submits 1.0.1 (build 1004), as the owner asked on November 26, 2026.
   push:
     branches: ['claude/wb-app-store-submit']
     paths: ['.github/workflows/weight-and-balance-app-store.yml', '.github/scripts/asc_app_store.py']
@@ -37,10 +37,10 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-      ACTION: ${{ inputs.action }}
-      VERSION: ${{ inputs.version }}
-      BUILD: ${{ inputs.build }}
-      WHATS_NEW: ${{ inputs.whats_new }}
+      ACTION: ${{ inputs.action || 'submit' }}
+      VERSION: ${{ inputs.version || '1.0.1' }}
+      BUILD: ${{ inputs.build || '1004' }}
+      WHATS_NEW: ${{ inputs.whats_new || 'Fixed scrolled content showing behind the clock and battery at the top of the screen.' }}
     steps:
       - uses: actions/checkout@v4
       - name: Talk to App Store Connect
