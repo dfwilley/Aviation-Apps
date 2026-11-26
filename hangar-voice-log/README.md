@@ -29,6 +29,11 @@ A daily Claude scheduled task runs `tools/make_hangar_data.py` on
 `Hangar Log Data <date>.json` in Dropbox › Dropbox Documents › N721NE ›
 Maintenance Software. The app reads the newest one when it opens.
 
+The file carries the last Hobbs reading, the maintainers, the standard jobs and
+the equipment list (ID, part, manufacturer and model; no serial numbers). The
+equipment list feeds the "Affected equipment" picker, and the picked IDs go out
+in the `EquipmentIDs` column of `Claude Logbook Import.txt`.
+
 ## Files
 
 | Path | What it is |

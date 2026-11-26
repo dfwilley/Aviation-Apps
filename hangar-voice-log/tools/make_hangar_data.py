@@ -74,6 +74,20 @@ def build(db):
     ]
     maintainers.sort(key=lambda m: m["id"])
 
+    # The Equipment table, for the app's "Affected equipment" picker.
+    # Serial numbers and remarks are left out on purpose.
+    equipment = []
+    for r in table(db, "Equipment"):
+        part = (r.get("Part") or "").strip()
+        if not part:
+            continue
+        detail = " ".join(x for x in ((r.get("Manufacturer") or "").strip(), (r.get("Model") or "").strip()) if x)
+        item = {"id": int(r["ID"]), "name": part}
+        if detail:
+            item["detail"] = detail
+        equipment.append(item)
+    equipment.sort(key=lambda e: e["id"])
+
     last = None
     for r in table(db, "Maintenance Log"):
         hobbs, day = number(r.get("Hobbs")), parse_date(r.get("Date"))
@@ -93,6 +107,7 @@ def build(db):
         "lastHobbs": last_hobbs,
         "maintainers": maintainers,
         "jobs": jobs,
+        "equipment": equipment,
     }
 
 

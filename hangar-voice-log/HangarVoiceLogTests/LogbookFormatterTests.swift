@@ -98,6 +98,29 @@ final class LogbookFormatterTests: XCTestCase {
         XCTAssertEqual(HangarData.chipName(for: data.jobs[0]), "Oil change")
     }
 
+    func testDataFileWithEquipmentListDecodes() throws {
+        let json = """
+        {
+          "schema": 1,
+          "generatedAt": "2026-11-26T13:00:00Z",
+          "maintainers": [],
+          "jobs": [],
+          "equipment": [{"id": 12, "name": "Propeller", "detail": "Hartzell HC-C2YR-1BFP"}, {"id": 13, "name": "Spinner"}]
+        }
+        """
+        let data = try HangarData.decode(Data(json.utf8))
+        XCTAssertEqual(data.equipment?.count, 2)
+        XCTAssertEqual(data.equipment?.first?.name, "Propeller")
+        XCTAssertNil(data.equipment?.last?.detail)
+    }
+
+    func testOlderDataFileHasNoEquipmentList() throws {
+        let json = """
+        {"schema": 1, "generatedAt": "2026-10-30T13:00:00Z", "maintainers": [], "jobs": []}
+        """
+        XCTAssertNil(try HangarData.decode(Data(json.utf8)).equipment)
+    }
+
     func testBuiltInCopyHasNoPersonalData() {
         XCTAssertTrue(HangarData.builtIn.jobs.isEmpty)
         XCTAssertTrue(HangarData.builtIn.maintainers.isEmpty)

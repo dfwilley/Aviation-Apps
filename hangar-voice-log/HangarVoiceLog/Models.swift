@@ -28,12 +28,23 @@ struct HangarData: Codable, Equatable {
         var id: Int { recurringId }
     }
 
+    /// One row of the Equipment table, for the "Affected equipment" picker.
+    struct Equipment: Codable, Equatable, Identifiable, Hashable {
+        var id: Int
+        /// The part name, e.g. "Propeller".
+        var name: String
+        /// Manufacturer and model, when Access has them.
+        var detail: String?
+    }
+
     var schema: Int
     var generatedAt: Date
     var source: String?
     var lastHobbs: LastHobbs?
     var maintainers: [Maintainer]
     var jobs: [Job]
+    /// Missing in data files made before the equipment picker was added.
+    var equipment: [Equipment]? = nil
 }
 
 extension HangarData {
