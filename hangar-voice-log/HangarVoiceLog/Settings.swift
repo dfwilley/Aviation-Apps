@@ -104,7 +104,6 @@ struct SettingsView: View {
 
     @State private var editingJob: HangarData.Job?
     @State private var choosingFolder = false
-    @State private var choosingImportFile = false
     @State private var forgetArmed = false
 
     var body: some View {
@@ -137,12 +136,6 @@ struct SettingsView: View {
         }
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { store.chooseFolder(url) }
-        }
-        // A second picker has to hang off a different view, or only one of them opens.
-        .background {
-            Color.clear.fileImporter(isPresented: $choosingImportFile, allowedContentTypes: [.plainText, .text, .data]) { result in
-                if case .success(let url) = result { store.chooseImportFile(url) }
-            }
         }
     }
 
@@ -261,13 +254,9 @@ struct SettingsView: View {
                     }
                     .buttonStyle(HangarButtonStyle(kind: .danger))
                 }
-                Text(store.importFileChosen
-                     ? "Finished entries are added to \(LogbookFormatter.importFileName). It is linked."
-                     : "One more step: tap Choose Import File and pick \(LogbookFormatter.importFileName) in that folder, so finished entries land in the right place.")
+                Text("Finished entries are added to \(LogbookFormatter.importFileName) in that folder.")
                     .font(Theme.body(13, relativeTo: .footnote))
-                    .foregroundStyle(store.importFileChosen ? Theme.muted : Theme.ink)
-                Button(store.importFileChosen ? "Change Import File" : "Choose Import File") { choosingImportFile = true }
-                    .buttonStyle(HangarButtonStyle(kind: store.importFileChosen ? .plain : .primary))
+                    .foregroundStyle(Theme.muted)
             } else {
                 Button("Choose Folder") { choosingFolder = true }
                     .buttonStyle(HangarButtonStyle())

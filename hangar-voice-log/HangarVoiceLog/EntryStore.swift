@@ -11,7 +11,6 @@ final class EntryStore: ObservableObject {
     @Published private(set) var dataStatus: String?
     @Published private(set) var isLoadingData = false
     @Published private(set) var folderName: String? = AccessFolder.folderName
-    @Published private(set) var importFileChosen = AccessFolder.isImportFileChosen
 
     private let fileManager = FileManager.default
     private let isDemo = DemoMode.isOn
@@ -73,20 +72,9 @@ final class EntryStore: ObservableObject {
         }
     }
 
-    func chooseImportFile(_ url: URL) {
-        do {
-            try AccessFolder.rememberImportFile(url)
-            importFileChosen = true
-            dataStatus = nil
-        } catch {
-            dataStatus = error.localizedDescription
-        }
-    }
-
     func forgetFolder() {
         AccessFolder.forget()
         folderName = nil
-        importFileChosen = false
     }
 
     /// Reads the newest Hangar Log Data file from Dropbox. Called each time the app opens.
