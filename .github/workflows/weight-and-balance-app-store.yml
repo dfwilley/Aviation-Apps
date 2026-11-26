@@ -7,6 +7,10 @@ name: Weight & Balance - App Store status / submit for review
 # Needs these repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
 
 on:
+  # A push to this work branch only looks (status); it never submits.
+  push:
+    branches: ['claude/wb-app-store-submit']
+    paths: ['.github/workflows/weight-and-balance-app-store.yml', '.github/scripts/asc_app_store.py']
   workflow_dispatch:
     inputs:
       action:
