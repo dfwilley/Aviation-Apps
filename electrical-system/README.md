@@ -57,6 +57,8 @@ A failed battery is treated as disconnected. A shorted battery behaves different
 
 `PowerModel.swift` holds all the logic and has no screen code. It works out who supplies each bus, then steps forward in time draining the batteries until something runs out. Battery 2 picks up the essential bus before Battery 1, because Battery 1 is the one loaded by the main bus.
 
+With both alternators out, the real handover is not instant. The diodes feed the essential bus from whichever battery is at the higher voltage, so Battery 1 may carry both buses for a short time until the main bus load pulls it below Battery 2. The app cannot know the battery voltages, so it shows Battery 2 on the essential bus from the start and says so in a note. The engine time counts both batteries either way.
+
 `ElectricalSystemTests/PowerModelTests.swift` checks the results against times worked out by hand. **These are flight-reference numbers. Do not change ratings or test expectations unless the owner asks for that specific change.**
 
 ## Building

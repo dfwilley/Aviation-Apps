@@ -346,6 +346,12 @@ enum PowerModel {
         if bothAltsOut, f.essentialPowered {
             a.append(Advisory(level: .warning, text:
                 "Both charging sources are out. The engine is running on battery power only. Land as soon as practical."))
+            if inputs.battery1OK, f.essentialFromBattery2 > 0.01 {
+                a.append(Advisory(level: .info, text:
+                    "The essential bus draws from whichever battery is at the higher voltage. Battery 1 may carry it for a short time at first. "
+                    + "As the main bus pulls Battery 1 down, Battery 2 takes over the essential bus and Battery 1 keeps the main bus. "
+                    + "The app shows Battery 2 from the start. When Battery 2 is empty, Battery 1 carries both buses."))
+            }
             if let shed = r.engineLostIfMainShedMin, let nowTime = r.engineLostAtMin, shed > nowTime + 1 {
                 a.append(Advisory(level: .info, text:
                     "With every main bus load off, engine power lasts about \(Self.durationText(shed))."))
