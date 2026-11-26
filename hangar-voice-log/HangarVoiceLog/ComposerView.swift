@@ -472,10 +472,6 @@ struct ComposerView: View {
             status = "Link your Access folder in Settings first."
             return
         }
-        guard AccessFolder.isImportFileChosen else {
-            status = "One more step in Settings: tap Choose Import File and pick \(LogbookFormatter.importFileName)."
-            return
-        }
         guard let hobbs = LogbookFormatter.number(entry.hobbs), hobbs > 0 else {
             status = "Add the Hobbs time before sending."
             return

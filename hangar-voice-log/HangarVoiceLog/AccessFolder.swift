@@ -9,8 +9,6 @@ enum AccessFolder {
         case notChosen
         case noAccess
         case wrongFolder
-        case importFileNotChosen
-        case wrongImportFile
         case unreadable(String)
 
         var errorDescription: String? {
@@ -21,10 +19,6 @@ enum AccessFolder {
                 return "The app lost access to the Dropbox folder. Choose it again."
             case .wrongFolder:
                 return "That folder doesn't have your Maintenance Record database in it. Choose the Maintenance Software folder."
-            case .importFileNotChosen:
-                return "In Settings, tap Choose Import File and pick \(LogbookFormatter.importFileName) in your Maintenance Software folder."
-            case .wrongImportFile:
-                return "That isn't \(LogbookFormatter.importFileName). Pick that file in your Maintenance Software folder."
             case .unreadable(let detail):
                 return "Couldn't read the Dropbox folder (\(detail))."
             }
@@ -34,26 +28,6 @@ enum AccessFolder {
     static let dataFilePrefix = "Hangar Log Data"
     private static let bookmarkKey = "accessFolderBookmark"
     private static let folderNameKey = "accessFolderName"
-
-    private static let importFileBookmarkKey = "accessImportFileBookmark"
-
-    /// True once the owner has picked Claude Logbook Import.txt itself.
-    static var isImportFileChosen: Bool {
-        UserDefaults.standard.data(forKey: importFileBookmarkKey) != nil
-    }
-
-    /// Remembers the import file the owner picked. Dropbox only saves changes
-    /// to a file the owner has opened through the Files picker; a file the app
-    /// creates by name inside the folder ends up in a stray copy of the folders.
-    static func rememberImportFile(_ url: URL) throws {
-        guard url.lastPathComponent.caseInsensitiveCompare(LogbookFormatter.importFileName) == .orderedSame else {
-            throw FolderError.wrongImportFile
-        }
-        let accessing = url.startAccessingSecurityScopedResource()
-        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-        let bookmark = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
-        UserDefaults.standard.set(bookmark, forKey: importFileBookmarkKey)
-    }
 
     static var folderName: String? {
         UserDefaults.standard.string(forKey: folderNameKey)
@@ -88,7 +62,6 @@ enum AccessFolder {
     static func forget() {
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
         UserDefaults.standard.removeObject(forKey: folderNameKey)
-        UserDefaults.standard.removeObject(forKey: importFileBookmarkKey)
     }
 
     /// Runs `work` with permission to use the folder.
@@ -137,29 +110,10 @@ enum AccessFolder {
         }
     }
 
-    /// Runs `work` with permission to use the import file the owner picked.
-    private static func withImportFile<T>(_ work: (URL) throws -> T) throws -> T {
-        guard let bookmark = UserDefaults.standard.data(forKey: importFileBookmarkKey) else {
-            throw FolderError.importFileNotChosen
-        }
-        var stale = false
-        let url: URL
-        do {
-            url = try URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
-        } catch {
-            throw FolderError.importFileNotChosen
-        }
-        guard url.startAccessingSecurityScopedResource() else { throw FolderError.importFileNotChosen }
-        defer { url.stopAccessingSecurityScopedResource() }
-        if stale, let fresh = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
-            UserDefaults.standard.set(fresh, forKey: importFileBookmarkKey)
-        }
-        return try work(url)
-    }
-
-    /// Adds lines to the Claude Logbook Import.txt file the owner picked.
+    /// Adds lines to Claude Logbook Import.txt, creating it with its header if needed.
     static func appendToImportFile(_ lines: [String]) throws {
-        try withImportFile { (fileURL: URL) -> Void in
+        try withFolder { (folder: URL) -> Void in
+            let fileURL = folder.appendingPathComponent(LogbookFormatter.importFileName)
             var coordinationError: NSError?
             var writeError: Error?
             NSFileCoordinator().coordinate(writingItemAt: fileURL, options: .forMerging, error: &coordinationError) { url in
