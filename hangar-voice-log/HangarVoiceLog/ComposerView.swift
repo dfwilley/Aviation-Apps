@@ -29,6 +29,7 @@ struct ComposerView: View {
     @State private var shareItems: ShareItems?
     @State private var showingCalendar = false
     @State private var newJob: HangarData.Job?
+    @State private var choosingEquipment = false
 
     init(existing: LogEntry?, defaultPerformer: String, onDone: @escaping (String) -> Void) {
         self.isNew = existing == nil
@@ -49,6 +50,15 @@ struct ComposerView: View {
     private var maintainers: [HangarData.Maintainer] {
         let fromFile = store.hangarData.maintainers
         return fromFile.isEmpty ? [.init(id: HangarData.ownerId, name: settings.displayOwner, ap: nil)] : fromFile
+    }
+
+    /// The Equipment list from the Access data file (empty until a file carries one).
+    private var equipment: [HangarData.Equipment] { store.hangarData.equipment ?? [] }
+
+    private var equipmentSummary: String {
+        if entry.equipmentIds.isEmpty { return "None" }
+        let names = Dictionary(equipment.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        return entry.equipmentIds.map { names[$0] ?? "#\($0)" }.joined(separator: ", ")
     }
 
     var body: some View {
@@ -92,6 +102,9 @@ struct ComposerView: View {
         .sheet(item: $shareItems) { ShareSheet(items: $0.items) }
         .sheet(item: $newJob) { job in
             JobEditor(job: job).environmentObject(settings)
+        }
+        .sheet(isPresented: $choosingEquipment) {
+            EquipmentPicker(equipment: equipment, selected: $entry.equipmentIds)
         }
     }
 
@@ -147,8 +160,9 @@ struct ComposerView: View {
             return
         }
         entry.job = name
+        // Equipment that came with a standard job goes; equipment picked by hand stays.
+        if entry.recurringId != 0 { entry.equipmentIds = [] }
         entry.recurringId = 0
-        entry.equipmentIds = []
         let current = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if jobs.contains(where: { $0.entry == current }) { entry.text = "" }
         status = nil
@@ -156,8 +170,8 @@ struct ComposerView: View {
 
     private func clearJob() {
         entry.job = ""
+        if entry.recurringId != 0 { entry.equipmentIds = [] }
         entry.recurringId = 0
-        entry.equipmentIds = []
         status = nil
     }
 
@@ -241,6 +255,34 @@ struct ComposerView: View {
                             .foregroundStyle(Theme.muted)
                     }
                     .field()
+                }
+            }
+
+            if linked {
+                VStack(alignment: .leading, spacing: 4) {
+                    FieldLabel(text: "Affected equipment")
+                    if equipment.isEmpty {
+                        Text("Your equipment list from Access isn't on the phone yet. It arrives with the next Hangar Log Data file.")
+                            .font(Theme.body(13, relativeTo: .footnote))
+                            .foregroundStyle(Theme.muted)
+                    } else {
+                        Button {
+                            choosingEquipment = true
+                        } label: {
+                            HStack {
+                                Text(equipmentSummary)
+                                    .font(Theme.body())
+                                    .foregroundStyle(Theme.ink)
+                                    .multilineTextAlignment(.leading)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(Theme.muted)
+                            }
+                            .field()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Affected equipment, \(equipmentSummary). Tap to change.")
+                    }
                 }
             }
         }
@@ -590,6 +632,76 @@ private struct PhotoTile: View {
         }
         .confirmationDialog("Remove this photo?", isPresented: $confirming) {
             Button("Remove Photo", role: .destructive, action: onRemove)
+        }
+    }
+}
+
+// MARK: - Equipment picker
+
+/// A searchable checklist of the Equipment table from Access. The picked IDs go
+/// into the EquipmentIDs column of the import file.
+struct EquipmentPicker: View {
+    let equipment: [HangarData.Equipment]
+    @Binding var selected: [Int]
+    @Environment(\.dismiss) private var dismiss
+    @State private var search = ""
+
+    private var shown: [HangarData.Equipment] {
+        let sorted = equipment.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let words = search.trimmingCharacters(in: .whitespaces)
+        guard !words.isEmpty else { return sorted }
+        return sorted.filter {
+            $0.name.localizedCaseInsensitiveContains(words) || ($0.detail ?? "").localizedCaseInsensitiveContains(words)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List(shown) { item in
+                Button {
+                    toggle(item.id)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.name)
+                                .font(Theme.body())
+                                .foregroundStyle(Theme.ink)
+                            if let detail = item.detail, !detail.isEmpty {
+                                Text(detail)
+                                    .font(Theme.body(13, relativeTo: .footnote))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                        }
+                        Spacer()
+                        if selected.contains(item.id) {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                }
+                .accessibilityAddTraits(selected.contains(item.id) ? .isSelected : [])
+            }
+            .searchable(text: $search, prompt: "Search equipment")
+            .navigationTitle("Affected equipment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") { selected = [] }
+                        .disabled(selected.isEmpty)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func toggle(_ id: Int) {
+        if let index = selected.firstIndex(of: id) {
+            selected.remove(at: index)
+        } else {
+            selected.append(id)
+            selected.sort()
         }
     }
 }
