@@ -18,7 +18,7 @@
 <h1 id="title">Ask Claude</h1>
 <p id="what"></p>
 <a class="go" id="go" href="#" hidden>Open the new chat in Claude</a>
-<p class="k" id="hint" hidden>If the browser asks whether to open Claude, choose Open. You can tick "Always allow" so it doesn't ask again. Once the chat is open you can close this tab.</p>
+<p class="k" id="hint" hidden>If the browser asks whether to open Claude, choose Open. Tick "Always allow" so it doesn't ask again. This tab closes itself a few seconds after Claude opens.</p>
 <p class="k" id="manual" hidden>If nothing opens, start a new chat in Claude and paste this sentence:</p>
 <textarea id="text" rows="3" readonly hidden></textarea>
 <script>
@@ -64,14 +64,25 @@
   box.value = text;
   box.hidden = false;
   location.href = url;
-  // Tidy up: once the Claude app has taken over (this tab has stayed in the background for 8 seconds),
-  // try to close the tab. Browsers that don't allow it just leave the tab open.
-  var timer = null;
+  // Tidy up: once the Claude app has taken over (this tab has been in the background for 4 seconds),
+  // close the tab. Browsers that don't allow it just leave the tab open.
+  var timer = null, left = false;
   window.addEventListener("blur", function () {
+    left = true;
     clearTimeout(timer);
-    timer = setTimeout(function () { if (!document.hasFocus()) { try { window.close(); } catch (e) {} } }, 8000);
+    timer = setTimeout(function () { if (!document.hasFocus()) { try { window.close(); } catch (e) {} } }, 4000);
   });
   window.addEventListener("focus", function () { clearTimeout(timer); });
+  // The blue button does the same thing by hand. If the browser never hands over to Claude, say so.
+  go.addEventListener("click", function () {
+    left = false;
+    what.textContent = "Asking the browser to open Claude...";
+    setTimeout(function () {
+      if (!left) {
+        what.textContent = "The browser did not open Claude. Look for a blocked pop-up icon at the right end of the address bar and allow it, or start a new chat in Claude yourself and paste the request below.";
+      }
+    }, 4000);
+  });
 })();
 </script>
 </body>
