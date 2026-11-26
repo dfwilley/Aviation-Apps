@@ -34,6 +34,9 @@ the equipment list (ID, part, manufacturer and model; no serial numbers). The
 equipment list feeds the "Affected equipment" picker, and the picked IDs go out
 in the `EquipmentIDs` column of `Claude Logbook Import.txt`.
 
+The owner confirmed on November 26, 2026 that the "Affected equipment" picker
+works on the phone.
+
 ## Files
 
 | Path | What it is |
