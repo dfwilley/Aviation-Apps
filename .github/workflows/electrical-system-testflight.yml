@@ -5,12 +5,10 @@ name: Electrical System - upload to TestFlight
 # Uses the signing helpers in hangar-voice-log/tools.
 # Needs these repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID.
 
+# SWITCHED OFF (November 26, 2026): the owner installs this app with Sideloadly only and does not want it in
+# App Store Connect. It no longer runs on its own. It can only be started by hand, and it will stop unless an
+# app record for the bundle ID exists in App Store Connect.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'electrical-system/**'
-      - '.github/workflows/electrical-system-testflight.yml'
   workflow_dispatch:
 
 defaults:

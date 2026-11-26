@@ -33,7 +33,8 @@ All apps are for one aircraft, N721NE, a Van's RV-14.
 **A push to `main` is a release.** There is no staging step.
 
 - Each app has workflows in `.github/workflows/` that run only when files in that app's folder change.
-- The four iPhone apps each have an `...-testflight.yml` workflow. Any push to `main` that touches the app's folder builds, signs and uploads a new build to TestFlight, and it installs on the testers' phones automatically.
+- Hangar Voice Log, Weight & Balance and Cruise Perf each have an `...-testflight.yml` workflow. Any push to `main` that touches the app's folder builds, signs and uploads a new build to TestFlight, and it installs on the testers' phones automatically.
+- **Electrical System is Sideloadly only.** The owner does not want it in App Store Connect or TestFlight at all (November 26, 2026). Its TestFlight workflow is switched off (manual start only); don't turn it back on or upload it unless he asks. A push to `main` publishes its unsigned `.ipa` on the Releases page.
 - The TestFlight workflows for Hangar Voice Log and Weight & Balance **do not run the tests**. Their tests run in the separate `...-build.yml` workflows, so a change with failing tests can still be uploaded. Check the test run before calling work finished. Cruise Perf is the exception: its TestFlight workflow runs the math check first.
 - Build numbers are the workflow run number plus 1000; don't set them by hand.
 - Signing uses four repository secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`. Never print or log them. The helper scripts are `hangar-voice-log/tools/asc_precheck.py` and `asc_signing.py`.
@@ -50,7 +51,7 @@ For anything larger than a small fix, work on a branch and merge to `main` only 
 - Hangar Voice Log: `HangarVoiceLogTests/` (logbook entry wording).
 - Weight & Balance: `WeightAndBalanceTests/` checks results against the web app's numbers. `web/wb-core.js` and `WBModel.swift` hold the same math and model defaults; change both together and run `node web/test.js`. Model defaults come from Van's weight and balance quick-reference sheets (sources listed in `weight-and-balance/README.md`).
 - Cruise Perf: `cruise-performance/ios/ModelCheck/` compares the Swift math with `expected.json`, which was produced by the web app's own code.
-- Electrical System: `ElectricalSystemTests/` checks power paths and battery times against hand-worked numbers, and `ElectricalSystemUITests/` runs the app on a simulator and touches the diagram. Its build workflow runs the tests on every branch, and its TestFlight workflow runs them before uploading.
+- Electrical System: `ElectricalSystemTests/` checks power paths and battery times against hand-worked numbers, and `ElectricalSystemUITests/` runs the app on a simulator and touches the diagram. Its build workflow runs the tests on every branch, and on `main` it runs them before publishing the `.ipa`.
 - These need a Mac, so they run in GitHub Actions, not locally on Linux or Windows. To test before merging, push to a branch and run the build workflow by hand on that branch (it has a "Run workflow" button).
 
 ## Things that are easy to get wrong

@@ -66,4 +66,4 @@ With both alternators out, the real handover is not instant. The diodes feed the
 XcodeGen from `project.yml`, built on GitHub's cloud Macs. There is no Mac.
 
 - `.github/workflows/electrical-system-build.yml` runs the tests on every branch that changes this folder. On `main` it also publishes an unsigned `.ipa` on the Releases page for Sideloadly.
-- `.github/workflows/electrical-system-testflight.yml` runs on `main` only. It runs the tests, then signs and uploads to TestFlight. The first upload needs an app record for `com.dfwilley.electricalsystem` in App Store Connect; the workflow stops with instructions if it is missing.
+- The app is installed with Sideloadly only. The owner does not want it in App Store Connect or TestFlight (decided November 26, 2026). `.github/workflows/electrical-system-testflight.yml` is switched off: it no longer runs on its own and can only be started by hand.
