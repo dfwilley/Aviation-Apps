@@ -1,0 +1,53 @@
+name: Weight & Balance - App Store status / submit for review
+
+# Started by hand only. "status" shows what App Store Connect has for
+# Homebuilt W&B (versions, uploaded builds, reviews). "submit" does what the
+# Submit for Review button does for the version typed in below, using a build
+# that is already on TestFlight. Nothing is built here.
+# Needs these repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'status = only look; submit = send the version to App Review'
+        type: choice
+        options: [status, submit]
+        default: status
+      version:
+        description: 'Version to submit, for example 1.0.1'
+        default: ''
+      build:
+        description: 'Build number to submit (blank = newest build of that version)'
+        default: ''
+      whats_new:
+        description: "What's New text shown on the App Store"
+        default: ''
+
+jobs:
+  app-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUNDLE_ID: com.dfwilley.weightandbalance
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      ACTION: ${{ inputs.action }}
+      VERSION: ${{ inputs.version }}
+      BUILD: ${{ inputs.build }}
+      WHATS_NEW: ${{ inputs.whats_new }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Talk to App Store Connect
+        run: |
+          python3 -m pip install --quiet --break-system-packages "pyjwt[crypto]"
+          if [ "$ACTION" = "submit" ]; then
+            if [ -z "$VERSION" ] || [ -z "$WHATS_NEW" ]; then
+              echo "::error::To submit, fill in the version and the What's New text."
+              exit 1
+            fi
+            python3 .github/scripts/asc_app_store.py submit "$BUNDLE_ID" "$VERSION" "$BUILD" "$WHATS_NEW"
+          else
+            python3 .github/scripts/asc_app_store.py status "$BUNDLE_ID"
+          fi
