@@ -40,13 +40,21 @@
   };
   var key = (location.hash || "").replace(/^#/, "");
   var what = document.getElementById("what");
-  if (!Object.prototype.hasOwnProperty.call(ASK, key)) {
-    what.textContent = "This page is opened from the Ask Claude buttons on the Aviation Apps Board. There is nothing to do here on its own.";
+  var text = "";
+  if (key.indexOf("t=") === 0) {
+    // A request typed into the board's prompt box. It is only typed into the new chat, never sent:
+    // the owner reads it there and presses Enter himself. Control characters are dropped and the length is capped.
+    try { text = decodeURIComponent(key.slice(2)); } catch (e) { text = ""; }
+    text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F​-‏‪-‮⁦-⁩]/g, "").slice(0, 4000);
+  } else if (Object.prototype.hasOwnProperty.call(ASK, key)) {
+    text = ASK[key];
+  }
+  if (!text) {
+    what.textContent = "This page is opened from the Ask Claude box on the Aviation Apps Board. There is nothing to do here on its own.";
     return;
   }
-  var text = ASK[key];
   var url = "claude://code/new?q=" + encodeURIComponent(text);
-  what.textContent = "Opening a new chat in the Claude desktop app with the first sentence typed in. Finish the sentence with what you want and press Enter.";
+  what.textContent = "Opening a new chat in the Claude desktop app with this request typed in. Read it there and press Enter to send it.";
   var go = document.getElementById("go");
   go.href = url;
   go.hidden = false;
@@ -56,6 +64,14 @@
   box.value = text;
   box.hidden = false;
   location.href = url;
+  // Tidy up: once the Claude app has taken over (this tab has stayed in the background for 8 seconds),
+  // try to close the tab. Browsers that don't allow it just leave the tab open.
+  var timer = null;
+  window.addEventListener("blur", function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { if (!document.hasFocus()) { try { window.close(); } catch (e) {} } }, 8000);
+  });
+  window.addEventListener("focus", function () { clearTimeout(timer); });
 })();
 </script>
 </body>
