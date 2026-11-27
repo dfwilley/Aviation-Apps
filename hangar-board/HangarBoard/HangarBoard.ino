@@ -39,14 +39,14 @@
 using namespace hb;
 
 #if HB_PICO
-static const int BOARD = BOARD_PICO_W;
-static const char* BOARD_NAME = "pico";
+static const int HB_BOARD = BOARD_PICO_W;
+static const char* HB_BOARD_NAME = "pico";
 #elif CONFIG_IDF_TARGET_ESP32S3
-static const int BOARD = BOARD_ESP32S3;
-static const char* BOARD_NAME = "esp32s3";
+static const int HB_BOARD = BOARD_ESP32S3;
+static const char* HB_BOARD_NAME = "esp32s3";
 #else
-static const int BOARD = BOARD_ESP32;
-static const char* BOARD_NAME = "esp32";
+static const int HB_BOARD = BOARD_ESP32;
+static const char* HB_BOARD_NAME = "esp32";
 #endif
 static const char* FW_VERSION = "1.2";
 static const char* AP_NAME = "HangarBoard-Setup";
@@ -78,17 +78,17 @@ void writeFile(const char* path, const String& s) {
 }
 void loadConfig() {
   LittleFS.begin();
-  applyPreset(cfg, BOARD);
+  applyPreset(cfg, HB_BOARD);
   String s = readFile("/cfg.json");
-  if (s.length()) configFromJson(cfg, std::string(s.c_str()), BOARD);
+  if (s.length()) configFromJson(cfg, std::string(s.c_str()), HB_BOARD);
 }
 void saveConfig() { writeFile("/cfg.json", configToJson(cfg).c_str()); }
 void restartBoard() { rp2040.reboot(); }
 #else
 void loadConfig() {
-  applyPreset(cfg, BOARD);
+  applyPreset(cfg, HB_BOARD);
   prefs.begin("hb", true); String s = prefs.getString("cfg", ""); prefs.end();
-  if (s.length()) configFromJson(cfg, std::string(s.c_str()), BOARD);
+  if (s.length()) configFromJson(cfg, std::string(s.c_str()), HB_BOARD);
 }
 void saveConfig() { prefs.begin("hb", false); prefs.putString("cfg", configToJson(cfg).c_str()); prefs.end(); }
 void restartBoard() { ESP.restart(); }
@@ -223,13 +223,13 @@ void setupServer() {
   });
   server.on("/api/config", HTTP_GET, []() {         // settings, plus which board this is so the page can label the wiring choices
     std::string s = configToJson(cfg);
-    s.insert(1, std::string("\"board\":\"") + BOARD_NAME + "\",");
+    s.insert(1, std::string("\"board\":\"") + HB_BOARD_NAME + "\",");
     sendJson(s);
   });
   server.on("/api/config", HTTP_POST, []() {
     int oldPanel = cfg.panel, oldPreset = cfg.pinPreset, op[6] = {cfg.cs, cfg.dc, cfg.rst, cfg.busy, cfg.sck, cfg.mosi};
     std::string oldTz = cfg.tz;
-    if (!configFromJson(cfg, std::string(server.arg("plain").c_str()), BOARD)) { sendJson("{\"ok\":false}", 400); return; }
+    if (!configFromJson(cfg, std::string(server.arg("plain").c_str()), HB_BOARD)) { sendJson("{\"ok\":false}", 400); return; }
     saveConfig();
     int np[6] = {cfg.cs, cfg.dc, cfg.rst, cfg.busy, cfg.sck, cfg.mosi};
     bool restart = oldPanel != cfg.panel || oldPreset != cfg.pinPreset || memcmp(op, np, sizeof op) != 0;
@@ -240,7 +240,7 @@ void setupServer() {
   server.on("/api/refresh", HTTP_POST, []() { wantUpdate = true; sendJson("{\"ok\":true}"); });
   server.on("/api/status", HTTP_GET, []() {
     JsonDocument d; d["updated"] = lastUpdatedText; d["wxError"] = data.wxError; d["metar"] = lastMetarRaw; d["taf"] = lastTafRaw;
-    d["ip"] = WiFi.localIP().toString().c_str(); d["version"] = FW_VERSION; d["board"] = BOARD_NAME;
+    d["ip"] = WiFi.localIP().toString().c_str(); d["version"] = FW_VERSION; d["board"] = HB_BOARD_NAME;
     std::string s; serializeJson(d, s); sendJson(s);
   });
   server.on("/api/wifi-reset", HTTP_POST, []() {
