@@ -41,6 +41,18 @@ code{background:#eee;padding:1px 5px;border-radius:4px}
 <p class="muted">Takes about a minute. If the board isn't found, hold its <b>BOOT</b> button while clicking Connect. If the port isn't listed at all, the computer may need the USB driver for the board's chip (Silicon Labs CP210x or WCH CH340).</p>
 </div>
 
+<h2>1b. Raspberry Pi Pico W instead of an ESP32</h2>
+<div class="card">
+<p>The board also runs on a <b>Raspberry Pi Pico W</b> (the Pico with Wi-Fi; the plain Pico won't work). The button above is only for ESP32 boards. For a Pico W:</p>
+<ol>
+<li>Download <a href="firmware/hangarboard-picow.uf2" download>hangarboard-picow.uf2</a>.</li>
+<li>Hold the Pico's white <b>BOOTSEL</b> button while plugging it into the computer, then let go. A drive named <b>RPI-RP2</b> appears.</li>
+<li>Copy the downloaded file onto that drive. The drive disappears and the Pico restarts with Hangar Board on it.</li>
+</ol>
+<p>The display uses the pins of Waveshare's Pico e-Paper modules, so a Pico W plugs straight into the back of one with no wires: DC GP8, CS GP9, CLK GP10, DIN GP11, RST GP12, BUSY GP13. An adapter board such as the DESPI-C02 can be wired to those same pins, with power from the Pico's 3V3 pin.</p>
+<p class="muted">Wi-Fi setup works the same way as step 3, except the setup page lists the networks directly and its address is shown on the screen.</p>
+</div>
+
 <h2>2. Connect the display</h2>
 <div class="card">
 <p>Choose your wiring on the board's settings page later. These are the two built-in options; anything else can be entered as custom pins.</p>
