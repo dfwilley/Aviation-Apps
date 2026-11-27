@@ -4,7 +4,7 @@
 
 **Install on an ESP32:** open https://dfwilley.github.io/Aviation-Apps/hangar-board/ in Chrome or Edge on a computer and click *Connect and install*.
 
-**Install on a Raspberry Pi Pico W:** hold the Pico's BOOTSEL button while plugging it into the computer. It shows up as a drive named RPI-RP2. Copy `firmware/hangarboard-picow.uf2` onto that drive. The Pico restarts by itself. Only the Pico W works (the plain Pico has no Wi-Fi).
+**Install on a Raspberry Pi Pico W:** hold the Pico's BOOTSEL button while plugging it into the computer. It shows up as a drive named RPI-RP2. Copy `firmware/hangarboard-picow.uf2` onto that drive. The Pico restarts by itself. Only the Pico W works (the plain Pico has no Wi-Fi). Full step-by-step build instructions are in [PICO-BUILD.md](PICO-BUILD.md).
 
 Supported displays: Good Display GDEY075Z08 (black/white/red), Good Display GDEY075T7, Waveshare 7.5" V2, Waveshare 7.5" (B) V2 (black/white/red). Supported boards: ESP32, ESP32-S3, Raspberry Pi Pico W.
 
