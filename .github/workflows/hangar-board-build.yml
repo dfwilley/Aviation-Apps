@@ -1,0 +1,76 @@
+name: Hangar Board firmware
+
+# Compiles the Hangar Board firmware for each supported board, so a change that
+# breaks one of them is caught before anyone loads it. On a work branch it also saves
+# the fresh Raspberry Pi Pico W firmware file back into hangar-board/firmware/.
+on:
+  push:
+    paths:
+      - 'hangar-board/HangarBoard/**'
+      - 'hangar-board/tests/**'
+      - '.github/workflows/hangar-board-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hangar-board-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Arduino build tool
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install board support and libraries
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+          arduino-cli core update-index
+          arduino-cli core install rp2040:rp2040
+          arduino-cli core install esp32:esp32@3.0.7
+          arduino-cli lib install "GxEPD2" "Adafruit GFX Library" "ArduinoJson" "WiFiManager"
+
+      - name: Check the settings page is packed into the firmware
+        run: |
+          python3 hangar-board/tools/embed.py
+          git diff --exit-code -- hangar-board/HangarBoard/web_assets.h
+
+      - name: Check the display pin choices
+        run: |
+          g++ -std=c++17 -I "$HOME/Arduino/libraries/ArduinoJson/src" -I hangar-board/HangarBoard hangar-board/tests/test_pins.cpp -o /tmp/test_pins
+          /tmp/test_pins
+
+      - name: Compile for Raspberry Pi Pico W
+        run: arduino-cli compile --fqbn rp2040:rp2040:rpipicow:flash=2097152_262144 --output-dir out/picow hangar-board/HangarBoard
+
+      - name: Compile for ESP32
+        run: arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --output-dir out/esp32 hangar-board/HangarBoard
+
+      - name: Compile for ESP32-S3
+        run: arduino-cli compile --fqbn esp32:esp32:esp32s3:PartitionScheme=huge_app --output-dir out/esp32s3 hangar-board/HangarBoard
+
+      - name: Keep the compiled firmware with this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: hangar-board-firmware
+          path: |
+            out/picow/*.uf2
+            out/esp32/*.merged.bin
+            out/esp32s3/*.merged.bin
+
+      - name: Save the Pico W firmware file on the work branch
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: |
+          cp out/picow/HangarBoard.ino.uf2 hangar-board/firmware/hangarboard-picow.uf2
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hangar-board/firmware/hangarboard-picow.uf2
+          git diff --cached --quiet || git commit -m "Hangar Board: Pico W firmware file built from ${GITHUB_SHA::7}"
+          git push

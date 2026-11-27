@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 #include <algorithm>
 #include <ArduinoJson.h>
 
@@ -138,18 +139,53 @@ struct DueItem {
 };
 struct Config {
   std::string tail = "N721NE", station = "KTUS", tz = "MST7";
-  int panel = 0;                 // 0 GDEY075Z08 (red), 1 GDEY075T7, 2 Waveshare 7.5 V2
-  int pinPreset = 0;             // 0 ESP32 dev board standard wiring, 1 Waveshare ESP32 driver board, 2 custom
+  int panel = 0;                 // 0 GDEY075Z08 (red), 1 GDEY075T7, 2 Waveshare 7.5 V2, 3 Waveshare 7.5 (B) V2 (red)
+  int pinPreset = 0;             // ESP32: 0 dev board standard wiring, 1 Waveshare ESP32 driver board, 2 custom
+                                 // Pico W: 0 Waveshare Pico e-Paper module, 1 adapter board wired to the same pins, 2 custom
   int cs = 5, dc = 17, rst = 16, busy = 4, sck = 18, mosi = 23;
   int refreshMin = 15, daCaution = 5000, staleMin = 90;
   double tach = 0; std::string tachDate;
   std::vector<DueItem> items; std::string note;
 };
 
-inline void applyPreset(Config& c, bool s3) {
+// Which kind of board the program is running on.
+enum { BOARD_ESP32 = 0, BOARD_ESP32S3 = 1, BOARD_PICO_W = 2 };
+
+// Raspberry Pi Pico W: the display clock and data pins must sit on one of the chip's two
+// SPI buses, and a few pins are not on the header at all. Returns 0 or 1 for the bus, -1 if unusable.
+inline int picoSpiBus(int sck, int mosi) {
+  if ((sck == 2 || sck == 6 || sck == 18 || sck == 22) && (mosi == 3 || mosi == 7 || mosi == 19 || mosi == 23)) return 0;
+  if ((sck == 10 || sck == 14 || sck == 26) && (mosi == 11 || mosi == 15 || mosi == 27)) return 1;
+  return -1;
+}
+inline bool picoPinsOk(const Config& c) {
+  int p[6] = {c.cs, c.dc, c.rst, c.busy, c.sck, c.mosi};
+  for (int i = 0; i < 6; i++) {
+    if (p[i] < 0 || p[i] > 28 || (p[i] >= 23 && p[i] <= 25)) return false;   // 23-25 run the Wi-Fi chip and LED
+    for (int j = 0; j < i; j++) if (p[i] == p[j]) return false;
+  }
+  return picoSpiBus(c.sck, c.mosi) >= 0;
+}
+// A free pin the SPI bus can use as its (unused) input, so it doesn't take over a display pin.
+inline int picoSpareRx(const Config& c) {
+  static const int rx[2][4] = {{16, 4, 0, 20}, {28, 8, 12, 28}};
+  int bus = picoSpiBus(c.sck, c.mosi); if (bus < 0) return -1;
+  for (int i = 0; i < 4; i++) {
+    int r = rx[bus][i];
+    if (r != c.cs && r != c.dc && r != c.rst && r != c.busy && r != c.sck && r != c.mosi) return r;
+  }
+  return -1;
+}
+
+inline void applyPreset(Config& c, int board) {
+  if (board == BOARD_PICO_W) {
+    // Presets 0 and 1 use the pins of Waveshare's Pico e-Paper modules. Custom pins that the Pico can't use fall back to them.
+    if (c.pinPreset != 2 || !picoPinsOk(c) || picoSpareRx(c) < 0) { c.cs = 9; c.dc = 8; c.rst = 12; c.busy = 13; c.sck = 10; c.mosi = 11; }
+    return;
+  }
   if (c.pinPreset == 1) { c.cs = 15; c.dc = 27; c.rst = 26; c.busy = 25; c.sck = 13; c.mosi = 14; }
   else if (c.pinPreset == 0) {
-    if (s3) { c.cs = 10; c.dc = 9; c.rst = 8; c.busy = 7; c.sck = 12; c.mosi = 11; }
+    if (board == BOARD_ESP32S3) { c.cs = 10; c.dc = 9; c.rst = 8; c.busy = 7; c.sck = 12; c.mosi = 11; }
     else { c.cs = 5; c.dc = 17; c.rst = 16; c.busy = 4; c.sck = 18; c.mosi = 23; }
   }
 }
@@ -171,16 +207,16 @@ inline std::string configToJson(const Config& c) {
 }
 
 // Merge JSON into config. Returns false if the JSON can't be read.
-inline bool configFromJson(Config& c, const std::string& js, bool s3 = false) {
+inline bool configFromJson(Config& c, const std::string& js, int board = BOARD_ESP32) {
   JsonDocument d; if (deserializeJson(d, js)) return false;
   if (d["tail"].is<const char*>()) c.tail = d["tail"].as<std::string>();
   if (d["station"].is<const char*>()) { c.station = d["station"].as<std::string>(); for (auto& ch : c.station) ch = toupper((unsigned char)ch); }
   if (d["tz"].is<const char*>() && d["tz"].as<std::string>().size() > 2) c.tz = d["tz"].as<std::string>();
-  if (!d["panel"].isNull()) c.panel = std::max(0, std::min(2, d["panel"].as<int>()));
+  if (!d["panel"].isNull()) c.panel = std::max(0, std::min(3, d["panel"].as<int>()));
   if (!d["pinPreset"].isNull()) c.pinPreset = std::max(0, std::min(2, d["pinPreset"].as<int>()));
   JsonObject p = d["pins"];
   if (!p.isNull() && c.pinPreset == 2) { c.cs = p["cs"] | c.cs; c.dc = p["dc"] | c.dc; c.rst = p["rst"] | c.rst; c.busy = p["busy"] | c.busy; c.sck = p["sck"] | c.sck; c.mosi = p["mosi"] | c.mosi; }
-  applyPreset(c, s3);
+  applyPreset(c, board);
   if (!d["refreshMin"].isNull()) c.refreshMin = std::max(5, std::min(120, d["refreshMin"].as<int>()));
   if (!d["daCaution"].isNull()) c.daCaution = d["daCaution"].as<int>();
   if (!d["staleMin"].isNull()) c.staleMin = d["staleMin"].as<int>();

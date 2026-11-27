@@ -62,12 +62,14 @@ pre{white-space:pre-wrap;font-size:13px;background:#f0f0ee;padding:8px;border-ra
 <label for="panel">E-paper display</label><select id="panel">
 <option value="0">Good Display GDEY075Z08 (black, white, red)</option>
 <option value="1">Good Display GDEY075T7 (black and white)</option>
-<option value="2">Waveshare 7.5 inch V2 (black and white)</option></select>
+<option value="2">Waveshare 7.5 inch V2 (black and white)</option>
+<option value="3">Waveshare 7.5 inch (B) V2 (black, white, red)</option></select>
 <label for="pinPreset">How it's wired</label><select id="pinPreset" onchange="showPins()">
 <option value="0">ESP32 dev board, standard wiring</option>
 <option value="1">Waveshare ESP32 e-Paper Driver Board</option>
 <option value="2">Custom pins</option></select>
 <div id="pins" class="g3" style="margin-top:6px"></div>
+<p class="muted" id="pinHelp" style="display:none">On the Pico W, use GP numbers. The SCK and MOSI pins must be a matching pair: SCK on 2, 6, 18 or 22 with MOSI on 3, 7, 19 or 23, or SCK on 10, 14 or 26 with MOSI on 11, 15 or 27. Pins that can't work are replaced by the Waveshare module's pins.</p>
 <p class="muted">Changing the display or wiring restarts the board.</p></div>
 
 <h2>Backup and import</h2>
@@ -91,10 +93,12 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function load(){fetch('/api/config').then(r=>r.json()).then(c=>{cfg=c;fill();status()}).catch(()=>msg('Could not reach the board','bad'))}
 function status(){fetch('/api/status').then(r=>r.json()).then(s=>{msg('Last screen update '+(s.updated||'not yet')+(s.wxError?' · weather: '+s.wxError:''), s.wxError?'bad':'ok');$('raw').textContent=(s.metar||'—')+'\n\n'+(s.taf||'')})}
 function fill(){['tail','station','refreshMin','daCaution','staleMin','tach','tachDate','note'].forEach(k=>{$(k).value=cfg[k]==null?'':cfg[k]});
+ if(cfg.board=='pico'){var o=$('pinPreset').options;o[0].text='Waveshare Pico e-Paper module (Pico plugged into the back)';o[1].text='Adapter board (such as DESPI-C02) wired to the same pins'}
  $('tz').value=cfg.tz||'MST7';$('panel').value=cfg.panel;$('pinPreset').value=cfg.pinPreset;
  if(!$('tachDate').value)$('tachDate').value=new Date().toISOString().slice(0,10);
  showPins();renderItems()}
 function showPins(){var custom=$('pinPreset').value=='2',p=cfg.pins||{};
+ $('pinHelp').style.display=custom&&cfg.board=='pico'?'':'none';
  $('pins').innerHTML=PINS.map(k=>'<div><label for="pin_'+k+'">'+k.toUpperCase()+' pin</label><input id="pin_'+k+'" type="number" min="0" max="48" value="'+esc(p[k])+'" '+(custom?'':'disabled')+'></div>').join('')}
 function renderItems(){var h='';(cfg.items||[]).forEach((it,i)=>{var k=it.kind||'d',hrs=k!='d',dt=k!='h';
  h+='<div class="item"><div class="g2"><div><label>Name'+(it.src=='db'?' <span class="muted">(from database)</span>':'')+'</label><input data-i="'+i+'" data-k="name" value="'+esc(it.name)+'"></div>'+
