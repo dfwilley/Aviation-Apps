@@ -2,7 +2,7 @@
 
 Step-by-step instructions for putting together the hangar status board using a Raspberry Pi Pico W and a 7.5 inch e-paper display.
 
-> **Status:** the Pico W firmware (version 1.2) compiles cleanly but has not yet been run on a real board. Until it has, the firmware file lives on the work branch, not on the main install page. Notes marked *"not yet confirmed"* below are the places most likely to need a correction after the first real build.
+> **Status:** the Pico W firmware (version 1.2) compiles cleanly but has not yet been run on a real board. Notes marked *"not yet confirmed"* below are the places most likely to need a correction after the first real build.
 
 ## What you need
 
@@ -25,8 +25,8 @@ Pick one display option:
 Do this first, before connecting the display.
 
 1. Download the firmware file `hangarboard-picow.uf2`:
-   <https://github.com/dfwilley/Aviation-Apps/raw/claude/project-thread-094ll9/hangar-board/firmware/hangarboard-picow.uf2>
-   (After this work is merged, the same file will be on the install page at <https://dfwilley.github.io/Aviation-Apps/hangar-board/>.)
+   <https://dfwilley.github.io/Aviation-Apps/hangar-board/firmware/hangarboard-picow.uf2>
+   (It is also linked from the install page at <https://dfwilley.github.io/Aviation-Apps/hangar-board/>.)
 2. Hold down the white **BOOTSEL** button on the Pico.
 3. While holding it, plug the Pico into the PC with the USB cable. Then let go.
 4. A new drive named **RPI-RP2** appears in File Explorer, like a USB stick.
