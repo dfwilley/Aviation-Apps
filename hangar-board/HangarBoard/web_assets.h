@@ -36,12 +36,14 @@ pre{white-space:pre-wrap;font-size:13px;background:#f0f0ee;padding:8px;border-ra
 <div><label for="tachDate">As of</label><input id="tachDate" type="date"></div></div>
 <p class="muted">Update this after you fly so hour-based items, like oil changes, count down correctly.</p></div>
 
-<h2 id="mfb">Hobbs from MyFlightbook</h2>
+<h2 id="mfb">MyFlightbook</h2>
 <div class="card"><p class="muted" id="mfbStatus">Not connected.</p>
 <div class="g2"><div><label for="mfbId">MyFlightbook client ID</label><input id="mfbId" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
 <div><label for="mfbSecret">Client secret (leave empty for a public client)</label><input id="mfbSecret" type="password" autocomplete="off"></div></div>
+<label style="display:flex;gap:10px;align-items:center;color:#1a1a1a;font-size:16px;margin-top:12px"><input type="checkbox" id="mfbPilot" style="width:24px;min-height:24px;flex:none">Also show my medical and flight review dates under Pilot</label>
+<p class="muted" id="mfbPilotList" style="display:none"></p>
 <div class="row" style="margin-top:10px"><button class="primary" onclick="mfbConnect()" id="mfbGo">Connect</button><button onclick="mfbCheck()" id="mfbNow">Check now</button><button onclick="mfbOff()" id="mfbStop">Disconnect</button></div>
-<p class="muted">The board reads your latest flights a few times a day and uses the highest ending Hobbs for this aircraft. It can only read flights, and it never lowers a Hobbs you typed above. You approve it on MyFlightbook's own site, so the board never sees your password. <a id="mfbHelp" href="https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html" target="_blank" rel="noopener">One-time setup steps</a></p></div>
+<p class="muted">The board reads your latest flights a few times a day and uses the highest ending Hobbs for this aircraft. It can only read, and it never lowers a Hobbs you typed above. For the medical and flight review dates, your MyFlightbook client also needs the currency permission; tick the box and tap Connect again. You approve it on MyFlightbook's own site, so the board never sees your password. <a id="mfbHelp" href="https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html" target="_blank" rel="noopener">One-time setup steps</a></p></div>
 
 <h2>Due items</h2>
 <div class="card"><div id="items"></div>
@@ -138,14 +140,16 @@ var mfbTimer=null,mfbWas=null;
 function mfbLoad(){fetch('/api/mfb').then(r=>r.json()).then(m=>{
  if(document.activeElement!=$('mfbId')&&!$('mfbId').value)$('mfbId').value=m.clientId||'';
  $('mfbSecret').placeholder=m.hasSecret?'saved on the board':'';
+ if(mfbWas==null)$('mfbPilot').checked=!!m.pilot;
+ var pl=$('mfbPilotList'),pi=m.pilotItems||[];pl.style.display=pi.length?'':'none';pl.textContent='From MyFlightbook, shown under Pilot: '+pi.map(i=>i.name+' '+fmtD(i.dueDate)).join('; ');
  var s=$('mfbStatus');s.textContent=m.status||(m.connected?'Connected.':'Not connected.');s.className='muted '+(m.connected?'ok':'');
  $('mfbNow').style.display=$('mfbStop').style.display=m.connected?'':'none';$('mfbGo').textContent=m.connected?'Connect again':'Connect';
  if(mfbWas!=null&&m.tach!=mfbWas&&m.tach>(parseFloat($('tach').value)||0)){cfg.tach=m.tach;cfg.tachDate=m.tachDate;$('tach').value=m.tach;$('tachDate').value=m.tachDate}
  mfbWas=m.tach;clearTimeout(mfbTimer);if(m.busy)mfbTimer=setTimeout(mfbLoad,3000)}).catch(()=>{})}
 function mfbConnect(){var id=$('mfbId').value.trim();if(!id){$('mfbStatus').textContent='Enter your MyFlightbook client ID first.';$('mfbStatus').className='muted bad';return}
- post('/api/mfb/start',{clientId:id,secret:$('mfbSecret').value,host:location.hostname}).then(r=>{if(r.url)location.href=r.url;else{$('mfbStatus').textContent='The board could not start the connection.';$('mfbStatus').className='muted bad'}})}
+ post('/api/mfb/start',{clientId:id,secret:$('mfbSecret').value,pilot:$('mfbPilot').checked,host:location.hostname}).then(r=>{if(r.url)location.href=r.url;else{$('mfbStatus').textContent='The board could not start the connection.';$('mfbStatus').className='muted bad'}})}
 function mfbCheck(){post('/api/mfb/check').then(()=>{$('mfbStatus').textContent='Checking MyFlightbook…';clearTimeout(mfbTimer);mfbTimer=setTimeout(mfbLoad,3000)})}
-function mfbOff(){post('/api/mfb/disconnect').then(()=>{$('mfbSecret').value='';mfbLoad()})}
+function mfbOff(){post('/api/mfb/disconnect').then(()=>{$('mfbSecret').value='';mfbWas=null;mfbLoad()})}
 mfbLoad();
 
 var lastImport=null;

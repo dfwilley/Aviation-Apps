@@ -307,6 +307,37 @@ inline bool pickHobbs(const char* flightsJson, const std::string& tail, HobbsPic
   }
   return true;
 }
+// Find a date inside text such as "Current Until: 11/30/2027" or "Expired: 6/30/2025" (US order, which the
+// board asks MyFlightbook for) and return it as "2027-11-30". Empty if there is none.
+inline std::string dateFromText(const std::string& s) {
+  for (size_t i = 0; i < s.size(); i++) {
+    if (!isdigit((unsigned char)s[i]) || (i > 0 && isdigit((unsigned char)s[i - 1]))) continue;
+    int a, b, c; char buf[16]; bool ok = false; int y = 0, m = 0, d = 0;
+    if (sscanf(s.c_str() + i, "%d/%d/%d", &a, &b, &c) == 3) { m = a; d = b; y = c; ok = true; }
+    else if (sscanf(s.c_str() + i, "%d-%d-%d", &a, &b, &c) == 3) { y = a; m = b; d = c; ok = true; }
+    if (ok && y > 1900 && y < 2200 && m >= 1 && m <= 12 && d >= 1 && d <= 31) { snprintf(buf, sizeof buf, "%04d-%02d-%02d", y, m, d); return buf; }
+  }
+  return "";
+}
+// Read MyFlightbook's currency list and keep the medical and flight review lines as pilot due items.
+inline bool pickPilotDates(const char* currencyJson, std::vector<DueItem>& out) {
+  JsonDocument filter; JsonObject f = filter[0].to<JsonObject>();
+  f["Attribute"] = true; f["Value"] = true; f["CurrencyGroup"] = true;
+  JsonDocument d; if (deserializeJson(d, currencyJson, DeserializationOption::Filter(filter))) return false;
+  if (!d.is<JsonArray>()) return false;
+  out.clear();
+  for (JsonObject o : d.as<JsonArray>()) {
+    JsonVariant g = o["CurrencyGroup"]; bool want;                 // MyFlightbook's groups: 2 = flight review, 6 = medical
+    if (g.is<const char*>()) { std::string n = g.as<std::string>(); want = n == "FlightReview" || n == "Medical"; }
+    else { int n = g | 0; want = n == 2 || n == 6; }
+    if (!want || out.size() >= 6) continue;
+    DueItem it; it.name = o["Attribute"] | std::string(""); it.dueDate = dateFromText(o["Value"] | std::string(""));
+    if (it.name.empty() || it.dueDate.empty()) continue;
+    it.group = 'p'; it.kind = 'd'; it.warnDays = 30; it.src = "mfb";
+    out.push_back(it);
+  }
+  return true;
+}
 // MyFlightbook's answer wins only when it is higher: a newer hand-typed value is never pulled back down.
 inline bool applyHobbs(Config& c, const HobbsPick& p, const std::string& today) {
   if (p.hobbs <= 0 || p.hobbs < c.tach + 0.05) return false;

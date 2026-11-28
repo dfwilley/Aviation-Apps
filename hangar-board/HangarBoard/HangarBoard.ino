@@ -50,7 +50,7 @@ static const char* HB_BOARD_NAME = "esp32s3";
 static const int HB_BOARD = BOARD_ESP32;
 static const char* HB_BOARD_NAME = "esp32";
 #endif
-static const char* FW_VERSION = "1.3.0";
+static const char* FW_VERSION = "1.4.0";
 static const char* AP_NAME = "HangarBoard-Setup";
 
 Config cfg;
@@ -199,7 +199,8 @@ void startTime() {
 static const char* MFB_BASE = "https://myflightbook.com/logbook/mvc/oAuth/";
 static const char* MFB_RETURN = "https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html";   // must be listed as a callback on the MyFlightbook client
 static const unsigned long MFB_EVERY_MS = 6UL * 3600000UL;     // MyFlightbook is a small free service: ask rarely
-struct MfbLink { String clientId, secret, refresh, access; long exp = 0; } mfb;   // kept apart from the settings so a settings backup never contains the keys
+struct MfbLink { String clientId, secret, refresh, access, scope; long exp = 0; bool pilot = false; } mfb;   // kept apart from the settings so a settings backup never contains the keys
+std::vector<DueItem> mfbPilot;   // medical and flight review dates read from MyFlightbook, shown under Pilot
 String mfbStatus, mfbVerifier, mfbState, mfbCode;
 unsigned long lastMfb = 0; bool wantMfb = false;
 
@@ -211,9 +212,17 @@ void loadMfb() {
 #endif
   JsonDocument d; if (!s.length() || deserializeJson(d, s)) return;
   mfb.clientId = d["id"] | ""; mfb.secret = d["secret"] | ""; mfb.refresh = d["refresh"] | ""; mfb.access = d["access"] | ""; mfb.exp = d["exp"] | 0L;
+  mfb.scope = d["scope"] | ""; mfb.pilot = d["pilot"] | false;
+  for (JsonObject o : d["items"].as<JsonArray>()) {
+    DueItem it; it.name = o["n"] | std::string(""); it.dueDate = o["d"] | std::string(""); it.group = 'p'; it.kind = 'd'; it.warnDays = 30; it.src = "mfb";
+    if (!it.name.empty() && !it.dueDate.empty()) mfbPilot.push_back(it);
+  }
 }
 void saveMfb() {
   JsonDocument d; d["id"] = mfb.clientId; d["secret"] = mfb.secret; d["refresh"] = mfb.refresh; d["access"] = mfb.access; d["exp"] = mfb.exp;
+  d["scope"] = mfb.scope; d["pilot"] = mfb.pilot;
+  JsonArray a = d["items"].to<JsonArray>();
+  for (auto& it : mfbPilot) { JsonObject o = a.add<JsonObject>(); o["n"] = it.name; o["d"] = it.dueDate; }
   String s; serializeJson(d, s);
 #if HB_PICO
   writeFile("/mfb.json", s);
@@ -241,6 +250,7 @@ int mfbPost(const String& url, const String& body, const String& bearer, String&
   HTTPClient http; http.setTimeout(20000); http.setUserAgent("HangarBoard/1.3 (e-paper status board)");
   if (!http.begin(client, url)) return -1;
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.addHeader("Accept-Language", "en-US");                 // so dates come back in a known order
   if (bearer.length()) http.addHeader("Authorization", "Bearer " + bearer);
   int code = http.POST(body);
   out = code > 0 ? http.getString() : String();
@@ -259,12 +269,13 @@ bool mfbToken(String body) {
   String at = d["access_token"] | "", rt = d["refresh_token"] | "";
   if (code == 200 && at.length()) {
     mfb.access = at; if (rt.length()) mfb.refresh = rt;
+    mfb.scope = d["scope"] | "";
     long life = d["expires_in"] | 0L; mfb.exp = (timeOk && life > 0) ? (long)time(nullptr) + life : 0;
     saveMfb(); return true;
   }
   if (code == 400 || code == 401) {                             // MyFlightbook said no: the approval has to be done again
     String why = d["error_description"] | ""; if (!why.length()) why = d["error"] | "";
-    mfb.access = ""; mfb.refresh = ""; mfb.exp = 0; saveMfb();
+    mfb.access = ""; mfb.refresh = ""; mfb.scope = ""; mfb.exp = 0; saveMfb();
     mfbStatus = "MyFlightbook turned the board down";
     if (why.length()) mfbStatus += " (" + why + ")";
     mfbStatus += ". Tap Connect to approve it again.";
@@ -284,6 +295,21 @@ int mfbFlights(bool thisAircraftOnly, String& out) {
   String fq = "{}";
   if (thisAircraftOnly) { JsonDocument q; q["GeneralText"] = normTail(cfg.tail); fq = ""; serializeJson(q, fq); }
   return mfbPost(String(MFB_BASE) + "OAuthResource/FlightsWithQueryAndOffset", "json=1&offset=0&maxCount=8&fq=" + enc(fq), mfb.access, out);
+}
+
+// Medical and flight review dates, if the owner asked for them and MyFlightbook granted the "currency" permission.
+bool mfbHasCurrency() { return (String(" ") + mfb.scope + " ").indexOf(" currency ") >= 0; }
+void mfbPilotDates() {
+  if (!mfb.pilot) { if (mfbPilot.size()) { mfbPilot.clear(); saveMfb(); wantUpdate = true; } return; }
+  if (!mfbHasCurrency()) { mfbStatus += " Pilot dates need the currency permission: add it to your MyFlightbook client, then tap Connect again."; return; }
+  String out; int code = mfbPost(String(MFB_BASE) + "OAuthResource/GetCurrencyForUser", "json=1", mfb.access, out);
+  std::vector<DueItem> found;
+  if (code != 200 || !pickPilotDates(out.c_str(), found)) { mfbStatus += String(" Pilot dates could not be read (") + code + ")."; return; }
+  bool same = found.size() == mfbPilot.size();
+  for (size_t i = 0; same && i < found.size(); i++) same = found[i].name == mfbPilot[i].name && found[i].dueDate == mfbPilot[i].dueDate;
+  if (!same) { mfbPilot = found; saveMfb(); wantUpdate = true; }
+  if (found.empty()) mfbStatus += " No medical or flight review date was found on MyFlightbook.";
+  else { mfbStatus += " Pilot dates: "; for (size_t i = 0; i < found.size(); i++) mfbStatus += String(i ? "; " : "") + found[i].name.c_str() + " " + fmtDate(found[i].dueDate).c_str(); mfbStatus += "."; }
 }
 
 void mfbCheck() {
@@ -321,6 +347,7 @@ void mfbCheck() {
     else if (pick.hobbs < cfg.tach - 0.05) mfbStatus = String("Connected. MyFlightbook's latest is ") + h + from + ", lower than the Hobbs entered here, so nothing was changed." + when;
     else mfbStatus = String("Connected. Hobbs ") + h + from + " is up to date." + when;
   }
+  mfbPilotDates();
 }
 
 /* ---------- the update cycle ---------- */
@@ -345,7 +372,9 @@ void doUpdate() {
     lastTafRaw = body; data.rawTaf = formatTaf(body); data.taf = scanTaf(body); data.haveTaf = true;
   } else if (code == 204) { data.haveTaf = false; }
 
-  fillItems(data, cfg, (long)((now + off * 60L) / 86400));
+  Config shown = cfg;                                          // the owner's own items, plus any pilot dates from MyFlightbook
+  shown.items.insert(shown.items.end(), mfbPilot.begin(), mfbPilot.end());
+  fillItems(data, shown, (long)((now + off * 60L) / 86400));
   char t[64]; struct tm lt; localtime_r(&now, &lt);
   strftime(t, sizeof t, "Updated %a %b %d, %Y %H%M %Z", &lt); data.updated = timeOk ? t : "Clock not set";
   lastUpdatedText = data.updated.substr(timeOk ? 8 : 0);
@@ -398,6 +427,8 @@ void setupServer() {
   server.on("/api/mfb", HTTP_GET, []() {
     JsonDocument d; d["clientId"] = mfb.clientId; d["hasSecret"] = mfb.secret.length() > 0; d["connected"] = mfb.refresh.length() > 0;
     d["busy"] = mfbCode.length() > 0 || wantMfb; d["status"] = mfbStatus; d["callback"] = MFB_RETURN; d["tach"] = cfg.tach; d["tachDate"] = cfg.tachDate;
+    d["pilot"] = mfb.pilot; JsonArray a = d["pilotItems"].to<JsonArray>();
+    for (auto& it : mfbPilot) { JsonObject o = a.add<JsonObject>(); o["name"] = it.name; o["dueDate"] = it.dueDate; }
     std::string s; serializeJson(d, s); sendJson(s);
   });
   server.on("/api/mfb/start", HTTP_POST, []() {                // returns the MyFlightbook approval address for the page to open
@@ -407,25 +438,29 @@ void setupServer() {
     bool hostOk = host.length() > 0 && host.length() < 64;
     for (size_t i = 0; i < host.length(); i++) { char c = host[i]; if (!isalnum((unsigned char)c) && c != '.' && c != '-') hostOk = false; }
     if (!id.length() || !hostOk) { sendJson("{\"ok\":false}", 400); return; }
-    if (id != mfb.clientId) { mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.exp = 0; }
+    if (id != mfb.clientId) { mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.scope = ""; mfb.exp = 0; }
     mfb.clientId = id; if (secret.length()) mfb.secret = secret;
+    mfb.pilot = d["pilot"] | false;
     saveMfb();
     mfbVerifier = randomText(64); mfbState = randomText(24) + "." + host;   // the part after the dot tells the approval page which board to come back to
-    String url = String(MFB_BASE) + "Authorize?response_type=code&scope=readflight&client_id=" + enc(mfb.clientId) + "&redirect_uri=" + enc(MFB_RETURN) +
+    String url = String(MFB_BASE) + "Authorize?response_type=code&scope=" + (mfb.pilot ? "readflight%20currency" : "readflight") + "&client_id=" + enc(mfb.clientId) + "&redirect_uri=" + enc(MFB_RETURN) +
       "&state=" + enc(mfbState) + "&code_challenge=" + pkceChallenge(std::string(mfbVerifier.c_str())).c_str() + "&code_challenge_method=S256";
     JsonDocument r; r["ok"] = true; r["url"] = url; std::string s; serializeJson(r, s); sendJson(s);
   });
   server.on("/mfb", HTTP_GET, []() {                           // the approval page sends the phone back here with a one-time code
     String st = server.arg("state"), code = server.arg("code"), err = server.arg("error");
     if (!mfbState.length() || st != mfbState) mfbStatus = "That approval didn't match this board's request. Tap Connect and try again.";
-    else if (!code.length()) { mfbStatus = "MyFlightbook didn't approve the connection"; if (err.length()) mfbStatus += " (" + err + ")"; mfbStatus += "."; }
+    else if (!code.length()) { mfbStatus = "MyFlightbook didn't approve the connection"; if (err.length()) mfbStatus += " (" + err + ")"; mfbStatus += ".";
+      if (err == "invalid_scope") mfbStatus += " Your MyFlightbook client doesn't have every permission the board asked for. Add the missing scope to the client, or untick the pilot dates box, and tap Connect again."; }
     else { mfbCode = code; mfbStatus = "Approved. Finishing the connection..."; }
     mfbState = "";
     server.sendHeader("Location", "/#mfb"); server.send(302, "text/plain", "");
   });
   server.on("/api/mfb/check", HTTP_POST, []() { wantMfb = true; sendJson("{\"ok\":true}"); });
   server.on("/api/mfb/disconnect", HTTP_POST, []() {
-    mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.exp = 0; saveMfb(); mfbStatus = ""; sendJson("{\"ok\":true}");
+    mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.scope = ""; mfb.exp = 0;
+    if (mfbPilot.size()) { mfbPilot.clear(); wantUpdate = true; }
+    saveMfb(); mfbStatus = ""; sendJson("{\"ok\":true}");
   });
   server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
   server.begin();

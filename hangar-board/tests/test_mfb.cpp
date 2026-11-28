@@ -45,6 +45,27 @@ int main() {
     check("the same Hobbs changes nothing", !applyHobbs(c, p, "2026-11-27") && c.tachDate == "2026-11-16"); }
   { Config c; HobbsPick p; p.hobbs = 50.0; check("a flight without a readable date is dated today", applyHobbs(c, p, "2026-11-27") && c.tachDate == "2026-11-27"); }
 
+  // Medical and flight review dates from MyFlightbook's currency list (made up). Groups: 1 flight experience, 2 flight review, 6 medical.
+  check("date inside text, US order", dateFromText("Current Until: 11/30/2027") == "2027-11-30" && dateFromText("Expired: 6/5/2025") == "2025-06-05");
+  check("ISO date inside text", dateFromText("until 2027-01-09") == "2027-01-09");
+  check("text without a date", dateFromText("Cannot determine without birth date").empty() && dateFromText("90 days / 3 landings").empty());
+  const char* cur = "["
+    "{\"Attribute\":\"ASEL - Passengers\",\"Value\":\"Current Until: 1/15/2027\",\"Status\":2,\"CurrencyGroup\":1,\"Query\":{\"UserName\":\"x\"}},"
+    "{\"Attribute\":\"Flight Review\",\"Value\":\"Current Until: 8/31/2028\",\"Status\":2,\"CurrencyGroup\":2},"
+    "{\"Attribute\":\"N12345 - Annual\",\"Value\":\"Current Until: 3/31/2027\",\"Status\":2,\"CurrencyGroup\":3},"
+    "{\"Attribute\":\"Medical\",\"Value\":\"Expired: 6/30/2026\",\"CurrencyGroup\":6},"
+    "{\"Attribute\":\"Medical (BASICMED ONLY)\",\"Value\":\"Current Until: 2/28/2027\",\"Status\":1,\"CurrencyGroup\":\"Medical\"},"
+    "{\"Attribute\":\"Medical\",\"Value\":\"Cannot determine without birth date\",\"CurrencyGroup\":6},"
+    "{\"Attribute\":\"No group\",\"Value\":\"Current Until: 1/1/2030\"}]";
+  { std::vector<DueItem> v; bool ok = pickPilotDates(cur, v);
+    check("only medical and flight review lines are kept", ok && v.size() == 3);
+    check("flight review date", v.size() == 3 && v[0].name == "Flight Review" && v[0].dueDate == "2028-08-31" && v[0].group == 'p' && v[0].kind == 'd');
+    check("expired medical keeps its date", v.size() == 3 && v[1].name == "Medical" && v[1].dueDate == "2026-06-30");
+    check("group given by name also works", v.size() == 3 && v[2].dueDate == "2027-02-28");
+    Config c; c.items = v; BoardData b; fillItems(b, c, daysFromCivil(2026, 11, 28));
+    check("they show under Pilot, soonest first, expired flagged", b.pilot.size() == 3 && b.aircraft.empty() && b.pilot[0].alert && b.pilot[0].value == "OVERDUE Jun 30, 2026" && b.pilot[2].value == "Aug 31, 2028"); }
+  { std::vector<DueItem> v; check("an error page is not a currency list", !pickPilotDates("Error: no", v)); }
+
   printf(failed ? "\n%d check(s) FAILED\n" : "\nAll MyFlightbook checks passed\n", failed);
   return failed ? 1 : 0;
 }

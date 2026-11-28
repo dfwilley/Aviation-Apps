@@ -102,7 +102,7 @@ Everything else is on the same settings page:
 - **Board:** airport (default KTUS), tail number, time zone, how often it updates, and the density altitude warning level.
 - **Load from maintenance database:** pick `Maintenance Record_be.accdb` and tap **Use these items**. The file is only read, never changed.
 - **Aircraft Hobbs time:** enter it after each flight, or let the board read it from MyFlightbook (next line).
-- **Hobbs from MyFlightbook (optional):** type your MyFlightbook client ID, tap **Connect**, and approve the board on MyFlightbook. After that the board picks up the ending Hobbs of your latest flight a few times a day. The one-time steps on the MyFlightbook side are at https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html
+- **Hobbs from MyFlightbook (optional):** type your MyFlightbook client ID, tap **Connect**, and approve the board on MyFlightbook. After that the board picks up the ending Hobbs of your latest flight a few times a day. Tick the box there to also show your medical and flight review dates under Pilot (your MyFlightbook client needs the currency permission for that). The one-time steps on the MyFlightbook side are at https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html
 - **Due items:** add aircraft or pilot items by date, by Hobbs hours, or whichever comes first.
 - **Note:** a free-text line shown on the board.
 
