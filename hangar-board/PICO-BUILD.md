@@ -2,7 +2,7 @@
 
 Step-by-step instructions for putting together the hangar status board using a Raspberry Pi Pico W and a 7.5 inch e-paper display.
 
-> **Status:** the Pico W firmware (version 1.2) compiles cleanly but has not yet been run on a real board. Notes marked *"not yet confirmed"* below are the places most likely to need a correction after the first real build.
+> **Status:** the Pico W firmware (version 1.2.1) compiles cleanly but has not yet been run on a real board. Notes marked *"not yet confirmed"* below are the places most likely to need a correction after the first real build.
 
 ## What you need
 
@@ -73,8 +73,8 @@ Use **3V3 OUT (pin 36)** for power. Do not use VBUS or VSYS, which carry 5 volts
 
 1. Power the Pico from USB.
 2. The screen may stay blank or look scrambled at this point. That is normal: the firmware assumes the red Good Display panel until you tell it otherwise in Step 4. If it does show a "Wi-Fi setup" screen, follow the same steps.
-3. On your phone, open Wi-Fi settings and join the network **HangarBoard-Setup**. It has no password. Give it up to half a minute to appear after power-up, because the Pico looks for nearby networks first.
-4. A setup page should open by itself. If it doesn't, open a browser and go to `192.168.42.1` (*not yet confirmed on a real board*; the correct address is also printed on the e-paper screen when the display type is right).
+3. On your phone, open Wi-Fi settings and join the network **HangarBoard-Setup**. It has no password. Give it up to half a minute to appear after power-up, because the Pico looks for nearby networks first. The small green light on the Pico comes on when the setup page is ready.
+4. A setup page should open by itself. If it doesn't, open a browser and go to `http://192.168.42.1` (the address is also printed on the e-paper screen when the display type is right).
 5. Pick your Wi-Fi network from the list, or type its name. Enter the password and tap **Save and connect**.
 6. The Pico restarts and joins your network. Your phone drops back to its normal Wi-Fi.
 
@@ -113,7 +113,7 @@ Then mount the board in the hangar and power it from any USB charger. It reconne
 |---|---|
 | No RPI-RP2 drive appears | Hold BOOTSEL *before* plugging in. Try a different USB cable; many are charge-only. |
 | No "HangarBoard-Setup" network | Wait 30 seconds after power-up. Unplug and replug. If it still never appears, reload the firmware (Step 1). |
-| Setup page doesn't open | Stay joined to HangarBoard-Setup, turn off mobile data for a moment, and browse to `192.168.42.1`. |
+| Setup page doesn't open | Check the Pico's green light is on. Stay joined to HangarBoard-Setup, turn off mobile data for a moment, and browse to `http://192.168.42.1` (type the `http://` part, so the browser doesn't try a secure connection). Make sure the Pico has firmware 1.2.1 or later: version 1.2 could not answer for several minutes when the display was missing or set to the wrong type. |
 | Screen returns to Wi-Fi setup after saving | The password was wrong or the network is out of range. Join HangarBoard-Setup and enter it again. |
 | Hangar Wi-Fi was down, board shows the setup screen | Leave it alone. It offers setup for 3 minutes, then retries the saved network, and keeps doing that until the Wi-Fi is back. |
 | `hangarboard.local` doesn't open | Use the address from your router's device list. The address is also printed at the bottom of the e-paper screen once it is drawing. |
