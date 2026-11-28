@@ -4,6 +4,7 @@
   Shows current METAR (decoded), density altitude, sunrise/sunset and TAF for one
   airport, plus aircraft maintenance and pilot currency due items. Due items can be
   loaded from the Access maintenance database on the settings page (read-only).
+  The Hobbs time can follow the owner's MyFlightbook logbook (read-only, optional).
 
   Weather: aviationweather.gov (NWS Aviation Weather Center data API).
   First power-up: join the Wi-Fi network "HangarBoard-Setup" on your phone and
@@ -28,6 +29,7 @@
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
+#include <esp_random.h>
 #endif
 #include <GxEPD2_BW.h>
 #include <GxEPD2_3C.h>
@@ -48,7 +50,7 @@ static const char* HB_BOARD_NAME = "esp32s3";
 static const int HB_BOARD = BOARD_ESP32;
 static const char* HB_BOARD_NAME = "esp32";
 #endif
-static const char* FW_VERSION = "1.2.1";
+static const char* FW_VERSION = "1.3.0";
 static const char* AP_NAME = "HangarBoard-Setup";
 
 Config cfg;
@@ -163,7 +165,7 @@ void showMessage(const char* title, const std::vector<std::string>& lines) {
 /* ---------- network ---------- */
 bool httpGet(const String& url, std::string& out, int& code) {
   WiFiClientSecure client; client.setInsecure();      // public weather data; certificate not pinned
-  HTTPClient http; http.setTimeout(15000); http.setUserAgent("HangarBoard/1.0 (ESP32 e-paper)");
+  HTTPClient http; http.setTimeout(15000); http.setUserAgent("HangarBoard/1.3 (e-paper status board)");
   if (!http.begin(client, url)) { code = -1; return false; }
   code = http.GET();
   bool ok = code == 200;
@@ -188,6 +190,137 @@ void startTime() {
 #endif
   for (int i = 0; i < 40 && time(nullptr) < 1700000000; i++) delay(250);
   timeOk = time(nullptr) >= 1700000000;
+}
+
+/* ---------- MyFlightbook: Hobbs time from the online logbook ---------- */
+// The owner approves the board once on MyFlightbook's own site (the board never sees the password).
+// MyFlightbook then hands the board a key that can only read flights. A few times a day the board
+// asks for the latest flights and takes the highest ending Hobbs for this aircraft.
+static const char* MFB_BASE = "https://myflightbook.com/logbook/mvc/oAuth/";
+static const char* MFB_RETURN = "https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html";   // must be listed as a callback on the MyFlightbook client
+static const unsigned long MFB_EVERY_MS = 6UL * 3600000UL;     // MyFlightbook is a small free service: ask rarely
+struct MfbLink { String clientId, secret, refresh, access; long exp = 0; } mfb;   // kept apart from the settings so a settings backup never contains the keys
+String mfbStatus, mfbVerifier, mfbState, mfbCode;
+unsigned long lastMfb = 0; bool wantMfb = false;
+
+void loadMfb() {
+#if HB_PICO
+  String s = readFile("/mfb.json");
+#else
+  prefs.begin("hb", true); String s = prefs.getString("mfb", ""); prefs.end();
+#endif
+  JsonDocument d; if (!s.length() || deserializeJson(d, s)) return;
+  mfb.clientId = d["id"] | ""; mfb.secret = d["secret"] | ""; mfb.refresh = d["refresh"] | ""; mfb.access = d["access"] | ""; mfb.exp = d["exp"] | 0L;
+}
+void saveMfb() {
+  JsonDocument d; d["id"] = mfb.clientId; d["secret"] = mfb.secret; d["refresh"] = mfb.refresh; d["access"] = mfb.access; d["exp"] = mfb.exp;
+  String s; serializeJson(d, s);
+#if HB_PICO
+  writeFile("/mfb.json", s);
+#else
+  prefs.begin("hb", false); prefs.putString("mfb", s); prefs.end();
+#endif
+}
+String randomText(int n) {                                     // from the chip's hardware random number source
+  static const char* A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  String o;
+  for (int i = 0; i < n; i++) {
+#if HB_PICO
+    uint32_t r = rp2040.hwrand32();
+#else
+    uint32_t r = esp_random();
+#endif
+    o += A[r % 62];
+  }
+  return o;
+}
+String enc(const String& v) { return String(urlEncode(std::string(v.c_str())).c_str()); }
+
+int mfbPost(const String& url, const String& body, const String& bearer, String& out) {
+  WiFiClientSecure client; client.setInsecure();              // encrypted, but the certificate is not pinned (same as the weather)
+  HTTPClient http; http.setTimeout(20000); http.setUserAgent("HangarBoard/1.3 (e-paper status board)");
+  if (!http.begin(client, url)) return -1;
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  if (bearer.length()) http.addHeader("Authorization", "Bearer " + bearer);
+  int code = http.POST(body);
+  out = code > 0 ? http.getString() : String();
+  http.end();
+  return code;
+}
+
+// Trade a one-time approval code, or the renewal key, for a fresh key. MyFlightbook may replace the renewal key each time, so save at once.
+bool mfbToken(String body) {
+  body += "&client_id=" + enc(mfb.clientId);
+  if (mfb.secret.length()) body += "&client_secret=" + enc(mfb.secret);
+  String url = String(MFB_BASE) + "OAuthToken", out;
+  int code = mfbPost(url, body, "", out);
+  if (code < 0) { delay(2000); code = mfbPost(url, body, "", out); }      // one more try straight away if the network dropped
+  JsonDocument d; deserializeJson(d, out);
+  String at = d["access_token"] | "", rt = d["refresh_token"] | "";
+  if (code == 200 && at.length()) {
+    mfb.access = at; if (rt.length()) mfb.refresh = rt;
+    long life = d["expires_in"] | 0L; mfb.exp = (timeOk && life > 0) ? (long)time(nullptr) + life : 0;
+    saveMfb(); return true;
+  }
+  if (code == 400 || code == 401) {                             // MyFlightbook said no: the approval has to be done again
+    String why = d["error_description"] | ""; if (!why.length()) why = d["error"] | "";
+    mfb.access = ""; mfb.refresh = ""; mfb.exp = 0; saveMfb();
+    mfbStatus = "MyFlightbook turned the board down";
+    if (why.length()) mfbStatus += " (" + why + ")";
+    mfbStatus += ". Tap Connect to approve it again.";
+  } else mfbStatus = String("Couldn't reach MyFlightbook (") + code + "). The board will try again later.";
+  return false;
+}
+
+void mfbExchange() {                                           // finish a connection the owner just approved
+  String code = mfbCode; mfbCode = "";
+  if (mfbToken("grant_type=authorization_code&code=" + enc(code) + "&code_verifier=" + mfbVerifier + "&redirect_uri=" + enc(MFB_RETURN))) {
+    mfbStatus = "Connected. Reading your flights..."; wantMfb = true;
+  }
+  mfbVerifier = "";
+}
+
+int mfbFlights(bool thisAircraftOnly, String& out) {
+  String fq = "{}";
+  if (thisAircraftOnly) { JsonDocument q; q["GeneralText"] = normTail(cfg.tail); fq = ""; serializeJson(q, fq); }
+  return mfbPost(String(MFB_BASE) + "OAuthResource/FlightsWithQueryAndOffset", "json=1&offset=0&maxCount=8&fq=" + enc(fq), mfb.access, out);
+}
+
+void mfbCheck() {
+  wantMfb = false; lastMfb = millis();
+  if (!mfb.refresh.length()) return;
+  if (WiFi.status() != WL_CONNECTED) { mfbStatus = "No Wi-Fi. The board will try again later."; return; }
+  String renew = "grant_type=refresh_token&refresh_token=" + enc(mfb.refresh);
+  time_t now = time(nullptr);
+  if (!mfb.access.length() || (mfb.exp && timeOk && (long)now > mfb.exp - 86400)) { if (!mfbToken(renew)) return; }
+  String out; int code = mfbFlights(true, out);
+  if (code == 401) {                                            // key no longer accepted: renew it once and ask again
+    if (!mfbToken("grant_type=refresh_token&refresh_token=" + enc(mfb.refresh))) return;
+    code = mfbFlights(true, out);
+  }
+  HobbsPick pick; bool ok = code == 200 && pickHobbs(out.c_str(), cfg.tail, pick);
+  if (ok && pick.matched == 0) {                                // nothing found by searching for the tail number: look through the latest flights instead
+    out = ""; code = mfbFlights(false, out); pick = HobbsPick();
+    ok = code == 200 && pickHobbs(out.c_str(), cfg.tail, pick);
+  }
+  out = "";
+  if (!ok) {
+    if (code == 200) mfbStatus = "MyFlightbook's answer couldn't be read. The board will try again later.";
+    else mfbStatus = String("MyFlightbook error ") + code + ". The board will try again later.";
+    return;
+  }
+  char t[40]; struct tm lt; localtime_r(&now, &lt);
+  strftime(t, sizeof t, "%Y-%m-%d", &lt); std::string today = timeOk ? t : "";
+  strftime(t, sizeof t, "%a %b %d %H%M", &lt); String when = timeOk ? String(" Checked ") + t + "." : String("");
+  if (pick.hobbs <= 0) {
+    mfbStatus = String("Connected, but no recent flight in ") + cfg.tail.c_str() + " has an ending Hobbs time." + when;
+  } else {
+    char h[24]; snprintf(h, sizeof h, "%.1f", pick.hobbs);
+    String from = pick.date.empty() ? String("") : String(" from the flight on ") + fmtDate(pick.date).c_str();
+    if (applyHobbs(cfg, pick, today)) { saveConfig(); wantUpdate = true; mfbStatus = String("Connected. Hobbs updated to ") + h + from + "." + when; }
+    else if (pick.hobbs < cfg.tach - 0.05) mfbStatus = String("Connected. MyFlightbook's latest is ") + h + from + ", lower than the Hobbs entered here, so nothing was changed." + when;
+    else mfbStatus = String("Connected. Hobbs ") + h + from + " is up to date." + when;
+  }
 }
 
 /* ---------- the update cycle ---------- */
@@ -260,6 +393,39 @@ void setupServer() {
     wm.resetSettings();
 #endif
     restartBoard();
+  });
+  /* MyFlightbook connection. The keys themselves are never sent to the page. */
+  server.on("/api/mfb", HTTP_GET, []() {
+    JsonDocument d; d["clientId"] = mfb.clientId; d["hasSecret"] = mfb.secret.length() > 0; d["connected"] = mfb.refresh.length() > 0;
+    d["busy"] = mfbCode.length() > 0 || wantMfb; d["status"] = mfbStatus; d["callback"] = MFB_RETURN; d["tach"] = cfg.tach; d["tachDate"] = cfg.tachDate;
+    std::string s; serializeJson(d, s); sendJson(s);
+  });
+  server.on("/api/mfb/start", HTTP_POST, []() {                // returns the MyFlightbook approval address for the page to open
+    JsonDocument d; deserializeJson(d, server.arg("plain"));
+    String id = d["clientId"] | "", secret = d["secret"] | "", host = d["host"] | "";
+    id.trim(); secret.trim();
+    bool hostOk = host.length() > 0 && host.length() < 64;
+    for (size_t i = 0; i < host.length(); i++) { char c = host[i]; if (!isalnum((unsigned char)c) && c != '.' && c != '-') hostOk = false; }
+    if (!id.length() || !hostOk) { sendJson("{\"ok\":false}", 400); return; }
+    if (id != mfb.clientId) { mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.exp = 0; }
+    mfb.clientId = id; if (secret.length()) mfb.secret = secret;
+    saveMfb();
+    mfbVerifier = randomText(64); mfbState = randomText(24) + "." + host;   // the part after the dot tells the approval page which board to come back to
+    String url = String(MFB_BASE) + "Authorize?response_type=code&scope=readflight&client_id=" + enc(mfb.clientId) + "&redirect_uri=" + enc(MFB_RETURN) +
+      "&state=" + enc(mfbState) + "&code_challenge=" + pkceChallenge(std::string(mfbVerifier.c_str())).c_str() + "&code_challenge_method=S256";
+    JsonDocument r; r["ok"] = true; r["url"] = url; std::string s; serializeJson(r, s); sendJson(s);
+  });
+  server.on("/mfb", HTTP_GET, []() {                           // the approval page sends the phone back here with a one-time code
+    String st = server.arg("state"), code = server.arg("code"), err = server.arg("error");
+    if (!mfbState.length() || st != mfbState) mfbStatus = "That approval didn't match this board's request. Tap Connect and try again.";
+    else if (!code.length()) { mfbStatus = "MyFlightbook didn't approve the connection"; if (err.length()) mfbStatus += " (" + err + ")"; mfbStatus += "."; }
+    else { mfbCode = code; mfbStatus = "Approved. Finishing the connection..."; }
+    mfbState = "";
+    server.sendHeader("Location", "/#mfb"); server.send(302, "text/plain", "");
+  });
+  server.on("/api/mfb/check", HTTP_POST, []() { wantMfb = true; sendJson("{\"ok\":true}"); });
+  server.on("/api/mfb/disconnect", HTTP_POST, []() {
+    mfb.secret = ""; mfb.refresh = ""; mfb.access = ""; mfb.exp = 0; saveMfb(); mfbStatus = ""; sendJson("{\"ok\":true}");
   });
   server.onNotFound([]() { server.sendHeader("Location", "/"); server.send(302, "text/plain", ""); });
   server.begin();
@@ -359,6 +525,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 #endif
   loadConfig();
+  loadMfb();
   makeDisplay();
   connectWifi();
   MDNS.begin("hangarboard");
@@ -368,7 +535,7 @@ void setup() {
   liveServer = &server;                                        // settings page keeps answering while the screen draws
 #endif
   startTime();
-  wantUpdate = true;
+  wantUpdate = true; wantMfb = true;                            // read the Hobbs time before the first screen is drawn
 }
 
 void loop() {
@@ -379,6 +546,8 @@ void loop() {
   if (wantRestart) { delay(500); restartBoard(); }
   static unsigned long lastWifiCheck = 0;
   if (millis() - lastWifiCheck > 30000) { lastWifiCheck = millis(); keepWifi(); }
+  if (mfbCode.length()) mfbExchange();
+  if (wantMfb || (mfb.refresh.length() && millis() - lastMfb > MFB_EVERY_MS)) mfbCheck();
   if (wantUpdate || millis() - lastUpdate > (unsigned long)cfg.refreshMin * 60000UL) doUpdate();
   delay(5);
 }
