@@ -48,7 +48,7 @@ static const char* HB_BOARD_NAME = "esp32s3";
 static const int HB_BOARD = BOARD_ESP32;
 static const char* HB_BOARD_NAME = "esp32";
 #endif
-static const char* FW_VERSION = "1.2";
+static const char* FW_VERSION = "1.2.1";
 static const char* AP_NAME = "HangarBoard-Setup";
 
 Config cfg;
@@ -102,8 +102,17 @@ typedef GxEPD2_BW<GxEPD2_750_T7, GxEPD2_750_T7::HEIGHT / 2> PanelBwWaveshare;
 
 #if HB_PICO
 // The Pico has two SPI buses; which one depends on the clock pin. Point the display at the right one.
-#define HB_USE_BUS(d) (d)->epd2.selectSPI(picoBus(), SPISettings(4000000, MSBFIRST, SPI_MODE0))
+// The display also calls serveWhileDrawing() while it waits for the panel, so web pages keep answering
+// during a redraw. Without that, a missing or wrongly set display stalls the pages for minutes.
+#define HB_USE_BUS(d) { (d)->epd2.selectSPI(picoBus(), SPISettings(4000000, MSBFIRST, SPI_MODE0)); (d)->epd2.setBusyCallback(serveWhileDrawing); }
 SPIClassRP2040& picoBus() { return picoSpiBus(cfg.sck, cfg.mosi) == 1 ? SPI1 : SPI; }
+WebServer* liveServer = nullptr;   // whichever web server is answering right now (setup page or settings page)
+DNSServer* liveDns = nullptr;
+void serveWhileDrawing(const void*) {
+  if (liveDns) liveDns->processNextRequest();
+  if (liveServer) liveServer->handleClient();
+  delay(1);
+}
 #else
 #define HB_USE_BUS(d)
 #endif
@@ -281,7 +290,8 @@ void wifiSetupPortal(unsigned long timeoutMs) {
   for (int i = 0; i < n; i++) { String id = WiFi.SSID(i); if (id.length() && options.indexOf("\"" + htmlEsc(id) + "\"") < 0) options += "<option value=\"" + htmlEsc(id) + "\">" + htmlEsc(id) + "</option>"; }
   WiFi.mode(WIFI_AP); WiFi.softAP(AP_NAME);
   delay(500);
-  IPAddress ip = WiFi.softAPIP(); String ipText = ip.toString();
+  IPAddress ip = WiFi.softAPIP(); if (!ip.isSet()) ip = IPAddress(192, 168, 42, 1);
+  String ipText = ip.toString();
   DNSServer dns; dns.start(53, "*", ip);                       // sends every address to the setup page, so phones open it by themselves
   WebServer portal(80); bool saved = false;
   String page = String("<!DOCTYPE html><html><head><meta name=viewport content='width=device-width,initial-scale=1'><title>Hangar Board Wi-Fi</title>"
@@ -302,6 +312,8 @@ void wifiSetupPortal(unsigned long timeoutMs) {
   });
   portal.onNotFound([&]() { portal.sendHeader("Location", "http://" + ipText + "/"); portal.send(302, "text/plain", ""); });
   portal.begin();
+  liveServer = &portal; liveDns = &dns;                        // keep answering while the screen draws
+  digitalWrite(LED_BUILTIN, HIGH);                             // the Pico's green light is on while the setup page is available
   showMessage("Wi-Fi setup", {
     "1. On your phone, open Wi-Fi settings and join the network \"HangarBoard-Setup\".",
     std::string("2. A setup page opens. If it doesn't, open a browser and go to ") + ipText.c_str(),
@@ -310,6 +322,7 @@ void wifiSetupPortal(unsigned long timeoutMs) {
   unsigned long start = millis();
   while (!saved && (!timeoutMs || millis() - start < timeoutMs)) { dns.processNextRequest(); portal.handleClient(); delay(2); }
   if (saved) { unsigned long t = millis(); while (millis() - t < 1500) { portal.handleClient(); delay(2); } restartBoard(); }
+  liveServer = nullptr; liveDns = nullptr; digitalWrite(LED_BUILTIN, LOW);
   portal.stop(); dns.stop(); WiFi.softAPdisconnect(true);
 }
 void connectWifi() {
@@ -342,12 +355,18 @@ void keepWifi() { if (WiFi.status() != WL_CONNECTED) WiFi.reconnect(); }
 /* ---------- setup and loop ---------- */
 void setup() {
   Serial.begin(115200);
+#if HB_PICO
+  pinMode(LED_BUILTIN, OUTPUT);
+#endif
   loadConfig();
   makeDisplay();
   connectWifi();
   MDNS.begin("hangarboard");
   MDNS.addService("http", "tcp", 80);
   setupServer();
+#if HB_PICO
+  liveServer = &server;                                        // settings page keeps answering while the screen draws
+#endif
   startTime();
   wantUpdate = true;
 }
