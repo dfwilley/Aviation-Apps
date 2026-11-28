@@ -47,6 +47,11 @@ jobs:
           g++ -std=c++17 -I "$HOME/Arduino/libraries/ArduinoJson/src" -I hangar-board/HangarBoard hangar-board/tests/test_pins.cpp -o /tmp/test_pins
           /tmp/test_pins
 
+      - name: Check the MyFlightbook sign-in maths and Hobbs picking
+        run: |
+          g++ -std=c++17 -I "$HOME/Arduino/libraries/ArduinoJson/src" -I hangar-board/HangarBoard hangar-board/tests/test_mfb.cpp -o /tmp/test_mfb
+          /tmp/test_mfb
+
       - name: Compile for Raspberry Pi Pico W
         run: arduino-cli compile --fqbn rp2040:rp2040:rpipicow:flash=2097152_262144 --output-dir out/picow hangar-board/HangarBoard
 
