@@ -19,24 +19,24 @@ table{border-collapse:collapse;width:100%}td{border-top:1px solid #ddd;padding:7
 <p class="muted">Your phone or computer has to be on the same Wi-Fi as the board for this step.</p></div>
 
 <div id="steps">
-<p>The Hangar Board can keep its Hobbs time up to date from your MyFlightbook logbook. It reads your latest flights a few times a day and uses the highest ending Hobbs for the aircraft named on the board. It can only read flights. It cannot add or change anything, and it never sees your MyFlightbook password.</p>
+<p>The Hangar Board can keep its Hobbs time up to date from your MyFlightbook logbook. It reads your latest flights a few times a day and uses the highest ending Hobbs for the aircraft named on the board. It can also show your medical and flight review due dates in the Pilot section. It can only read. It cannot add or change anything, and it never sees your MyFlightbook password.</p>
 
 <h2>1. Tell MyFlightbook about the board (one time)</h2>
 <div class="card"><ol>
 <li>Sign in at <a href="https://myflightbook.com/logbook/mvc/oauth" target="_blank" rel="noopener">myflightbook.com/logbook/mvc/oauth</a>.</li>
-<li><b>If you already have a client:</b> edit it, add the callback address below on a new line next to the ones already there, and make sure the flight-reading scope is included (it is called <code>readflight</code>).</li>
+<li><b>If you already have a client:</b> edit it, add the callback address below on a new line next to the ones already there, and make sure the flight-reading scope is included (it is called <code>readflight</code>). To also show your medical and flight review dates on the board, include the currency scope too (<code>currency</code>).</li>
 <li><b>If you don't:</b> open "Add a client" and fill it in like this, then press Add.</li></ol>
 <table>
 <tr><td>Client ID</td><td>A name of your own, for example <span class="v">hangarboard-</span> followed by your tail number. It has to be different from everyone else's.</td></tr>
 <tr><td>Client Secret</td><td>Tick "Create as a public client, using PKCE (no secret required)".</td></tr>
 <tr><td>Client Name</td><td><span class="v">Hangar Board</span></td></tr>
 <tr><td>Callback URL(s)</td><td><span class="v">https://dfwilley.github.io/Aviation-Apps/hangar-board/mfb.html</span></td></tr>
-<tr><td>Requested Scopes</td><td>Only the one for reading your flights.</td></tr></table></div>
+<tr><td>Requested Scopes</td><td>The one for reading your flights. Add the one for viewing your currency if you want your medical and flight review dates on the board.</td></tr></table></div>
 
 <h2>2. Connect the board</h2>
 <div class="card"><ol>
 <li>On the hangar Wi-Fi, open the board's settings page: <a href="http://hangarboard.local">http://hangarboard.local</a></li>
-<li>Under "Hobbs from MyFlightbook", type your Client ID. If your client has a secret, type that too. Tap Connect.</li>
+<li>Under "Hobbs from MyFlightbook", type your Client ID. If your client has a secret, type that too. Tick the box for medical and flight review dates if you want them. Tap Connect.</li>
 <li>MyFlightbook asks you to sign in and approve. Tap to allow it.</li>
 <li>You come back to the settings page, and within a minute it shows the Hobbs time it found.</li></ol>
 <p class="muted">The board only raises the Hobbs time. If you type a higher number yourself, it stays until MyFlightbook catches up. The aircraft name on the board has to match the tail number in MyFlightbook, and the flights need an ending Hobbs filled in.</p></div>
